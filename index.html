@@ -1,1 +1,145 @@
-"<!-- Frontend -->" 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+// ... (existing code) ...
+    <title>Mapa Político de Guerrero - Descubre tu Perfil</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+// ... (NO SE NECESITA html2canvas) ...
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+// ... (existing code) ...
+// ... (existing code) ...
+// ... (existing code) ...
+// ... (existing code)
+    <script>
+        const mainContent = document.getElementById('main-content');
+// ... (existing code) ...
+        const resultsContent = document.getElementById('results-content');
+
+        let currentQuestionIndex = 0;
+// ... (existing code) ...
+        
+        // --- PREGUNTAS Y LÓGICA DE LA ENCUESTA ---
+        const preguntas = [
+// ... (existing code) ...
+        ];
+        const preguntaBonus = { id: 11, pregunta: "¿De qué municipio de Guerrero eres? (Opcional)", tipo: "desplegable", opciones: [ "Prefiero no decir", "Acapulco de Juárez", "Chilpancingo de los Bravo", "Iguala de la Independencia", "Zihuatanejo de Azueta", "Chilapa de Álvarez", "Tlapa de Comonfort", "Taxco de Alarcón", "Otro municipio de Guerrero", "Vivo fuera de Guerrero" ] };
+// ... (existing code) ...
+
+        const allQuestions = [...preguntas, preguntaBonus, preguntaContacto];
+
+// ... (existing code) ...
+// ... (existing code) ...
+// ... (existing code) ...
+            preguntaActualDiv.innerHTML = newQuestionHTML;
+            setTimeout(() => {
+// ... (existing code) ...
+            }, 50);
+        }
+        
+// ... (existing code) ...
+// ... (existing code) ...
+            finishSurvey();
+        }
+
+        // --- FUNCIÓN DE ENCUESTA ACTUALIZADA (CON TIMEOUT DE 8 SEGUNDOS) ---
+        async function finishSurvey() {
+// ... (existing code) ...
+            wrapper?.classList.add('leaving');
+
+            setTimeout(() => {
+// ... (existing code) ...
+            }, 400);
+
+            // PREPARAMOS LOS DATOS PARA ENVIAR
+// ... (existing code) ...
+            const surveyAnswers = userAnswers.filter(r => r.pregunta_id !== 12);
+
+            // --- INICIO DE CAMBIOS: AÑADIMOS TIMEOUT ---
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 segundos
+            // --- FIN DE CAMBIOS ---
+
+            try {
+                // LLAMADA A NUESTRA API EN VERCEL
+                const response = await fetch('/api/procesar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+// ... (existing code) ...
+// ... (existing code) ...
+// ... (existing code) ...
+                        }
+                    }),
+                    signal: controller.signal // --- AÑADIMOS EL ABORT SIGNAL ---
+                });
+
+                clearTimeout(timeoutId); // --- Limpiamos el timeout si la respuesta fue rápida
+
+                // Si la respuesta no es OK (ej. 404, 500), capturamos el error
+// ... (existing code) ...
+                    const errorData = await response.json(); // Vercel envía errores como JSON
+// ... (existing code) ...
+                    throw new Error(errorData.message || `Error del servidor: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+// ... (existing code) ...
+// ... (existing code) ...
+                    displayResultsPage(result.perfil);
+                } else {
+// ... (existing code) ...
+                }
+
+            } catch (error) {
+                console.error("Error al contactar al backend:", error);
+                
+                // --- INICIO DE CAMBIOS: MANEJO DE TIMEOUT ---
+                if (error.name === 'AbortError') {
+                    error.message = 'El servidor está tardando mucho en responder. (Timeout)';
+                }
+                // --- FIN DE CAMBIOS ---
+
+                // Limpiamos el intervalo de carga aunque haya error
+// ... (existing code) ...
+                if (intervalId) {
+                    clearInterval(intervalId);
+                }
+
+                // Mostramos el error en la pantalla de carga, sin usar alert()
+// ... (existing code) ...
+                if (loadingMessage) {
+                    // Mostramos el mensaje de error que recibimos del servidor
+                    loadingMessage.innerText = `Error: ${error.message}. Revisa la configuración de Vercel.`;
+                    loadingMessage.classList.add('text-red-400'); // Hacemos el error visible
+                }
+// ... (existing code) ...
+                if (loader) {
+                    loader.style.display = 'none'; // Ocultamos la animación
+                }
+            }
+        }
+        // ----------------------------------------
+
+        function displayLoadingScreen() {
+// ... (existing code) ...
+// ... (existing code) ...
+// ... (existing code) ...
+// ... (existing code)
+        // --- LÓGICA DE CÁLCULO (YA NO SE USA EN EL FRONTEND) ---
+        // Se mantiene solo como referencia, el cálculo real es en el backend.
+        
+// ... (existing code) ...
+// ... (existing code) ...
+// ... (existing code) ...
+// ... (existing code) ...
+// ... (existing code) ...
+// ... (existing code) ...
+// ... (existing code) ...
+// ... (existing code)
+    </script>
+</body>
+</html>
+
+
