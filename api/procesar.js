@@ -1,117 +1,87 @@
-// --- ARCHIVO DE FUNCIÓN SERVERLESS DE VERCEL ---
-// Ruta: /api/procesar.js
-// VERSIÓN CON LOGS PARA DEPURAR
+// --- IMPORTANTE: ESTA ES UNA VERSIÓN DE PRUEBA ---
+// --- NO GUARDA EN BASE DE DATOS NI ENVÍA EMAIL ---
+// --- SOLO CALCULA Y DEVUELVE EL PERFIL ---
 
-import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
-
-// --- 1. CONFIGURACIÓN DE SERVICIOS EXTERNOS ---
-console.log("Iniciando función..."); // LOG 1
-
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
-const resendApiKey = process.env.RESEND_API_KEY;
-
-let supabase;
-let resend;
-
-// --- INICIO DE CAMBIOS: Verificación de variables ---
-if (supabaseUrl && supabaseKey) {
-    console.log("Supabase URL y Key Encontradas. Creando cliente..."); // LOG 2
-    supabase = createClient(supabaseUrl, supabaseKey);
-} else {
-    console.error("ERROR: SUPABASE_URL o SUPABASE_ANON_KEY no encontradas."); // LOG DE ERROR
-}
-
-if (resendApiKey) {
-    console.log("Resend API Key Encontrada. Creando cliente..."); // LOG 3
-    resend = new Resend(resendApiKey);
-} else {
-    console.error("ERROR: RESEND_API_KEY no encontrada."); // LOG DE ERROR
-}
-// --- FIN DE CAMBIOS ---
-
-
-// --- 2. FUNCIÓN PRINCIPAL QUE MANEJA LAS SOLICITUDES ---
-export default async function handler(request) {
-    console.log("Handler invocado. Método:", request.method); // LOG 4
-
-    if (request.method !== 'POST') {
-        return new Response(JSON.stringify({ success: false, message: 'Método no permitido' }), {
-            status: 405, headers: { 'Content-Type': 'application/json' },
-        });
-    }
-
-    // Verificar que las variables de entorno están cargadas
-    if (!supabase || !resend) {
-        console.error("Error Crítico: Faltan variables de entorno (SUPABASE o RESEND no inicializados)."); // LOG 5
-        return new Response(JSON.stringify({ success: false, message: 'Error de configuración del servidor. Revisa las variables de entorno en Vercel.' }), {
-            status: 500, headers: { 'Content-Type': 'application/json' },
-        });
-    }
+export default async function handler(request, response) {
+    console.log("LOG 1: Iniciando función... (MODO DE PRUEBA)");
 
     try {
-        console.log("Procesando request..."); // LOG 6
-        // Obtenemos los datos que envía el frontend
-        const { userAnswers, contactInfo } = await request.json();
+        if (request.method !== 'POST') {
+            console.log("LOG 2: Método no permitido");
+            return response.status(405).json({ message: 'Método no permitido' });
+        }
 
-        // --- PASO A: CALCULAR EL PERFIL POLÍTICO ---
-        console.log("Calculando perfil..."); // LOG 7
+        console.log("LOG 3: Procesando request...");
+        const { userAnswers, contactInfo } = request.body;
+
+        if (!userAnswers) {
+            console.log("LOG 4: No se encontraron respuestas");
+            return response.status(400).json({ message: 'No se encontraron respuestas' });
+        }
+
+        console.log("LOG 5: Calculando perfil...");
         const perfil = calcularPerfilPolitico(userAnswers);
-        perfil.nombre = contactInfo.nombre || 'Tu Perfil';
-        console.log("Perfil calculado:", perfil.etiqueta); // LOG 8
+        
+        console.log(`LOG 6: Perfil calculado: ${perfil.etiqueta}`);
 
-        // --- PASO B: GUARDAR LOS DATOS EN LA BASE DE DATOS ---
-        console.log("Guardando en Supabase..."); // LOG 9
-        const { error: dbError } = await supabase
-            .from('participaciones') // Asegúrate que tu tabla se llame "participaciones"
+        // --- SECCIÓN DE SUPABASE (DESACTIVADA PARA PRUEBA) ---
+        /*
+        console.log("LOG 7: Guardando en Supabase...");
+        const { data, error } = await supabase
+            .from('participaciones')
             .insert([{ 
                 respuestas: userAnswers, 
                 perfil_calculado: perfil,
                 municipio: perfil.municipio,
                 contacto: contactInfo
             }]);
+        
+        if (error) {
+            throw new Error(`Error al guardar en la base de datos: ${error.message}`);
+        }
+        console.log("LOG 8: Guardado en Supabase exitoso.");
+        */
+        // --- FIN DE SECCIÓN SUPABASE ---
 
-        if (dbError) {
-            console.error('Error de Supabase:', dbError); // LOG DE ERROR
-            throw new Error(`Error al guardar en la base de datos: ${dbError.message}`);
+
+        // --- SECCIÓN DE RESEND (DESACTIVADA PARA PRUEBA) ---
+        /*
+        if (contactInfo && contactInfo.email) {
+            console.log("LOG 9: Enviando email...");
+            await resend.emails.send({
+                from: 'Resultados <noreply@miperfilguerrero.com>',
+                to: contactInfo.email,
+                subject: 'Tu Perfil Político de Guerrero',
+                html: `<h1>Tu perfil es: ${perfil.etiqueta}</h1><p>Gracias por participar.</p>`
+            });
+            console.log("LOG 10: Email enviado.");
         }
-        console.log("Guardado en Supabase exitoso."); // LOG 10
+        */
+        // --- FIN DE SECCIÓN RESEND ---
         
-        // --- PASO C: ENVIAR EMAIL (SOLO TEXTO) ---
-        if (contactInfo && contactInfo.email && contactInfo.email.includes('@')) {
-            console.log("Enviando email a:", contactInfo.email); // LOG 11
-            try {
-                await resend.emails.send({
-                    from: 'Resultados <resultados@miperfilguerrero.com>', // Necesitas un dominio verificado
-                    to: contactInfo.email,
-                    subject: '🗺️ Tu Perfil Político de Guerrero está listo',
-                    html: `<p>¡Hola ${contactInfo.nombre || 'participante'}!</p><p>Tu perfil político es: <strong>${perfil.etiqueta}</strong>.</p><p>¡Gracias por participar e iniciar la conversación!</p>`,
-                });
-                console.log("Email enviado exitosamente."); // LOG 12
-            } catch (emailError) {
-                console.error("Error al enviar email:", emailError); // LOG DE ERROR
+        console.log("LOG 11: Enviando respuesta exitosa al frontend.");
+        
+        // Devolvemos el perfil calculado
+        return response.status(200).json({ 
+            success: true, 
+            perfil: {
+                ...perfil,
+                nombre: contactInfo?.nombre || ''
             }
-        }
-        
-        // --- PASO D: RESPONDER AL FRONTEND (ÉXITO) ---
-        console.log("Respondiendo al frontend con éxito."); // LOG 13
-        return new Response(JSON.stringify({ success: true, perfil }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
         });
 
-    } catch (e) {
-        console.error('Error en la función handler:', e); // LOG DE ERROR
-        return new Response(JSON.stringify({ success: false, message: e.message || 'Error interno del servidor' }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
+    } catch (error) {
+        console.error("ERROR CRÍTICO:", error.message);
+        return response.status(500).json({ 
+            success: false, 
+            message: error.message 
         });
     }
 }
 
 
-// --- 3. LÓGICA DE CÁLCULO (MIS 9 PERFILES ORIGINALES) ---
+// --- FUNCIÓN DE CÁLCULO DE PERFIL ---
+// (Esta función no necesita conexión a internet)
 function calcularPerfilPolitico(respuestas) {
     let suma_x = 0, suma_y = 0, contador = 0;
     let temas = [], liderazgo = "No definido", valor_gobierno = "No definido";
@@ -129,26 +99,37 @@ function calcularPerfilPolitico(respuestas) {
                 temas.push(opcion.tema);
                 suma_y += opcion.boost_y;
             });
-        } else if (r.pregunta_id === 2) { suma_y += (r.valor * 7); contador++; } 
-          else if (r.pregunta_id === 6) { suma_x += (r.valor * 8); contador++; }
+        } else if (r.pregunta_id === 2 && r.valor) {
+            suma_y += (r.valor * 7);
+            contador++;
+        } else if (r.pregunta_id === 6 && r.valor) {
+            suma_x += (r.valor * 8);
+            contador++;
+        }
     });
 
-    const divisor = contador > 0 ? contador : 1;
-    const posicion_x = Math.max(0, Math.min(100, (suma_x / divisor) || 50));
-    const posicion_y = Math.max(0, Math.min(100, (suma_y / divisor) || 50));
-    
+    // Evitar división por cero
+    if (contador === 0) contador = 1;
+
+    const posicion_x = Math.max(0, Math.min(100, (suma_x / contador) || 50));
+    const posicion_y = Math.max(0, Math.min(100, (suma_y / contador) || 50));
     const etiqueta = determinarEtiqueta(posicion_x, posicion_y);
-    const tema_principal = temas.length > 0 ? Object.entries(temas.reduce((acc, v) => (acc[v] = (acc[v] || 0) + 1, acc), {})).reduce((a, b) => a[1] > b[1] ? a : b)[0] : "Equilibrado";
+    
+    const tema_principal = temas.length > 0 
+        ? Object.entries(temas.reduce((acc, v) => (acc[v] = (acc[v] || 0) + 1, acc), {}))
+                .reduce((a, b) => a[1] > b[1] ? a : b)[0] 
+        : "Equilibrado";
+    
     const municipio = respuestas.find(r => r.pregunta_id === 11)?.valor || "No especificado";
 
-    return { 
+    return {
         posicion_x: Math.round(posicion_x),
         posicion_y: Math.round(posicion_y),
-        etiqueta, 
-        tema_principal, 
-        liderazgo_preferido: liderazgo, 
-        valor_gobierno, 
-        municipio 
+        etiqueta,
+        tema_principal,
+        liderazgo_preferido: liderazgo,
+        valor_gobierno,
+        municipio,
     };
 }
 
