@@ -1,9 +1,21 @@
-// --- IMPORTANTE: ESTA ES UNA VERSIÓN DE PRUEBA ---
-// --- NO GUARDA EN BASE DE DATOS NI ENVÍA EMAIL ---
-// --- SOLO CALCULA Y DEVUELVE EL PERFIL ---
+import { createClient } from '@supabase/supabase-js';
+import { Resend } from 'resend';
+
+// Variables de entorno (¡DEBEN ESTAR EN VERCEL!)
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const resendApiKey = process.env.RESEND_API_KEY;
+
+// --- Verificación de Variables de Entorno ---
+if (!supabaseUrl || !supabaseAnonKey || !resendApiKey) {
+    console.error("ERROR CRÍTICO: Faltan variables de entorno. Revisa la configuración en Vercel.");
+}
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const resend = new Resend(resendApiKey);
 
 export default async function handler(request, response) {
-    console.log("LOG 1: Iniciando función... (MODO DE PRUEBA)");
+    console.log("LOG 1: Iniciando función... (Modo COMPLETO)");
 
     try {
         if (request.method !== 'POST') {
@@ -21,11 +33,9 @@ export default async function handler(request, response) {
 
         console.log("LOG 5: Calculando perfil...");
         const perfil = calcularPerfilPolitico(userAnswers);
-        
         console.log(`LOG 6: Perfil calculado: ${perfil.etiqueta}`);
 
-        // --- SECCIÓN DE SUPABASE (DESACTIVADA PARA PRUEBA) ---
-        /*
+        // --- SECCIÓN DE SUPABASE (ACTIVADA) ---
         console.log("LOG 7: Guardando en Supabase...");
         const { data, error } = await supabase
             .from('participaciones')
@@ -37,31 +47,25 @@ export default async function handler(request, response) {
             }]);
         
         if (error) {
+            console.error("ERROR DE SUPABASE:", error.message);
             throw new Error(`Error al guardar en la base de datos: ${error.message}`);
         }
         console.log("LOG 8: Guardado en Supabase exitoso.");
-        */
-        // --- FIN DE SECCIÓN SUPABASE ---
 
-
-        // --- SECCIÓN DE RESEND (DESACTIVADA PARA PRUEBA) ---
-        /*
+        // --- SECCIÓN DE RESEND (ACTIVADA) ---
         if (contactInfo && contactInfo.email) {
             console.log("LOG 9: Enviando email...");
             await resend.emails.send({
-                from: 'Resultados <noreply@miperfilguerrero.com>',
+                from: 'Resultados <noreply@miperfilguerrero.com>', // Cambia esto si tienes un dominio
                 to: contactInfo.email,
                 subject: 'Tu Perfil Político de Guerrero',
-                html: `<h1>Tu perfil es: ${perfil.etiqueta}</h1><p>Gracias por participar.</p>`
+                html: `<h1>Hola ${contactInfo.nombre || ''}, tu perfil es: ${perfil.etiqueta}</h1><p>¡Gracias por participar y compartir tu resultado!</p>`
             });
             console.log("LOG 10: Email enviado.");
         }
-        */
-        // --- FIN DE SECCIÓN RESEND ---
         
         console.log("LOG 11: Enviando respuesta exitosa al frontend.");
         
-        // Devolvemos el perfil calculado
         return response.status(200).json({ 
             success: true, 
             perfil: {
@@ -71,7 +75,7 @@ export default async function handler(request, response) {
         });
 
     } catch (error) {
-        console.error("ERROR CRÍTICO:", error.message);
+        console.error("ERROR CRÍTICO EN HANDLER:", error.message);
         return response.status(500).json({ 
             success: false, 
             message: error.message 
@@ -79,9 +83,7 @@ export default async function handler(request, response) {
     }
 }
 
-
 // --- FUNCIÓN DE CÁLCULO DE PERFIL ---
-// (Esta función no necesita conexión a internet)
 function calcularPerfilPolitico(respuestas) {
     let suma_x = 0, suma_y = 0, contador = 0;
     let temas = [], liderazgo = "No definido", valor_gobierno = "No definido";
@@ -108,18 +110,14 @@ function calcularPerfilPolitico(respuestas) {
         }
     });
 
-    // Evitar división por cero
     if (contador === 0) contador = 1;
-
     const posicion_x = Math.max(0, Math.min(100, (suma_x / contador) || 50));
     const posicion_y = Math.max(0, Math.min(100, (suma_y / contador) || 50));
     const etiqueta = determinarEtiqueta(posicion_x, posicion_y);
-    
     const tema_principal = temas.length > 0 
         ? Object.entries(temas.reduce((acc, v) => (acc[v] = (acc[v] || 0) + 1, acc), {}))
                 .reduce((a, b) => a[1] > b[1] ? a : b)[0] 
         : "Equilibrado";
-    
     const municipio = respuestas.find(r => r.pregunta_id === 11)?.valor || "No especificado";
 
     return {
