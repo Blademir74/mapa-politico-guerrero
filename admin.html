@@ -78,7 +78,12 @@
         const errorMsg = document.getElementById('error-msg');
         const passwordPrompt = document.getElementById('password-prompt');
         const dashboardContent = document.getElementById('dashboard-content');
-        
+        // --- CONFIGURACIÓN DE SUPABASE ---
+        // ¡IMPORTANTE! PEGA TUS LLAVES AQUÍ
+        const SUPABASE_URL = 'https://kezgjbyyztmkhewvgrxq.supabase.co'; // Esta ya está
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlemdqYnl5enRta2hld3ZncnhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExNDM3NTIsImV4cCI6MjA3NjcxOTc1Mn0.iOFHwFLrFYb29G2WnK2Gm94yLKserA84ty9rEOjZR4o)';
+        // Contraseña simple para el dashboard
+        const ADMIN_PASSWORD = 'guerrero2025';
         loginButton.onclick = () => {
             if (passwordInput.value === ADMIN_PASSWORD) {
                 passwordPrompt.style.display = 'none';
