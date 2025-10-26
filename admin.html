@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Administrador</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Importar Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+
+    <div id="password-prompt" class="flex items-center justify-center min-h-screen bg-gray-800">
+        <div class="bg-gray-700 p-8 rounded-lg shadow-xl text-center">
+            <h2 class="text-2xl font-bold mb-4">Acceso Restringido</h2>
+            <p class="mb-4">Ingresa la contraseña de administrador:</p>
+            <input type="password" id="admin-password" class="w-full p-2 rounded bg-gray-800 text-white border border-gray-600">
+            <button id="login-button" class="w-full bg-blue-600 hover:bg-blue-700 p-2 rounded font-bold mt-4">Entrar</button>
+            <p id="error-msg" class="text-red-400 mt-2 hidden"></p>
+        </div>
+    </div>
+
+    <div id="dashboard-content" class="container mx-auto p-8 hidden">
+        <h1 class="text-4xl font-bold mb-8 font-montserrat">Dashboard de Administrador</h1>
+
+        <!-- Métricas Principales -->
+        <div class="grid md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h3 class="text-gray-400 text-sm font-bold uppercase">Total de Participantes</h3>
+                <p id="total-participantes" class="text-5xl font-bold text-blue-400">...</p>
+            </div>
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h3 class="text-gray-400 text-sm font-bold uppercase">Municipio Más Activo</h3>
+                <p id="top-municipio" class="text-3xl font-bold text-green-400">...</p>
+            </div>
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h3 class="text-gray-400 text-sm font-bold uppercase">Perfil Más Común</h3>
+                <p id="top-perfil" class="text-3xl font-bold text-yellow-400">...</p>
+            </div>
+        </div>
+
+        <!-- Tabla de Últimos Registros -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-bold mb-4">Últimas Participaciones</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-left">
+                    <thead class="bg-gray-700">
+                        <tr>
+                            <th class="p-3">Fecha</th>
+                            <th class="p-3">Perfil</th>
+                            <th class="p-3">Municipio</th>
+                            <th class="p-3">Contacto</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-registros">
+                        <!-- Filas inyectadas por JS -->
+                        <tr><td colspan="4" class="p-4 text-center">Cargando datos...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURACIÓN DE SUPABASE ---
+        // ¡IMPORTANTE! PEGA TUS LLAVES AQUÍ
+        const SUPABASE_URL = 'https://kezgjbyyztnkhewgrxq.supabase.co'; // Tu URL de la imagen
+        const SUPABASE_ANON_KEY = 'pega_aqui_tu_llave_ANON_PUBLIC'; // Tu llave ANON de la imagen
+        // Contraseña simple para el dashboard
+        const ADMIN_PASSWORD = 'guerrero2025'; 
+
+        // --- LÓGICA DE AUTENTICACIÓN ---
+        const loginButton = document.getElementById('login-button');
+        const passwordInput = document.getElementById('admin-password');
+        const errorMsg = document.getElementById('error-msg');
+        const passwordPrompt = document.getElementById('password-prompt');
+        const dashboardContent = document.getElementById('dashboard-content');
+        
+        loginButton.onclick = () => {
+            if (passwordInput.value === ADMIN_PASSWORD) {
+                passwordPrompt.style.display = 'none';
+                dashboardContent.style.display = 'block';
+                loadDashboardData();
+            } else {
+                errorMsg.innerText = 'Contraseña incorrecta.';
+                errorMsg.style.display = 'block';
+            }
+        };
+        passwordInput.onkeyup = (e) => { if (e.key === 'Enter') loginButton.click(); }
+
+
+        // --- LÓGICA DEL DASHBOARD ---
+        async function loadDashboardData() {
+            if (!SUPABASE_URL || SUPABASE_ANON_KEY === 'pega_aqui_tu_llave_ANON_PUBLIC') {
+                alert('ERROR: Debes editar el archivo admin.html y pegar tus llaves de Supabase.');
+                return;
+            }
+
+            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            
+            // Cargar datos
+            const { data, error } = await supabase
+                .from('participaciones')
+                .select('*')
+                .order('created_at', { ascending: false }); // Ordenar por fecha
+
+            if (error) {
+                console.error('Error al cargar datos:', error);
+                document.getElementById('total-participantes').innerText = 'Error';
+                return;
+            }
+
+            // --- 1. Calcular Métricas ---
+            document.getElementById('total-participantes').innerText = data.length.toLocaleString('es-MX');
+
+            const municipios = data.map(r => r.municipio).filter(m => m && m !== 'Prefiero no decir');
+            const perfiles = data.map(r => r.perfil_calculado.etiqueta);
+
+            document.getElementById('top-municipio').innerText = calcularTop(municipios);
+            document.getElementById('top-perfil').innerText = calcularTop(perfiles);
+
+            // --- 2. Llenar Tabla ---
+            const tablaBody = document.getElementById('tabla-registros');
+            tablaBody.innerHTML = ''; // Limpiar
+            
+            data.slice(0, 50).forEach(registro => { // Mostrar los últimos 50
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-gray-700 hover:bg-gray-700';
+                tr.innerHTML = `
+                    <td class="p-3">${new Date(registro.created_at).toLocaleString('es-MX')}</td>
+                    <td class="p-3 font-bold">${registro.perfil_calculado.etiqueta}</td>
+                    <td class="p-3">${registro.municipio}</td>
+                    <td class="p-3">${registro.contacto?.nombre || ''} (${registro.contacto?.email || 'N/A'})</td>
+                `;
+                tablaBody.appendChild(tr);
+            });
+        }
+
+        function calcularTop(arr) {
+            if (arr.length === 0) return 'N/A';
+            const counts = arr.reduce((acc, val) => {
+                acc[val] = (acc[val] || 0) + 1;
+                return acc;
+            }, {});
+            return Object.entries(counts).reduce((a, b) => a[1] > b[1] ? a : b)[0];
+        }
+
+    </script>
+</body>
+</html>
