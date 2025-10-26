@@ -9,27 +9,57 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Poppins:wght@400;600&family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Poppins', sans-serif; scroll-behavior: smooth; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            scroll-behavior: smooth;
+        }
         .font-montserrat { font-family: 'Montserrat', sans-serif; }
         .font-inter { font-family: 'Inter', sans-serif; }
         .hero-bg { 
-            background-color: #1f2937;
+            background-color: #1f2937; /* Fallback color */
             background-image: linear-gradient(135deg, rgba(16, 185, 129, 0.7), rgba(59, 130, 246, 0.7)), url('https://i.ibb.co/PZ70VbjZ/Regiones-de-Guerrero.png');
             background-size: cover;
             background-position: center;
             background-blend-mode: multiply;
         }
-        .cta-button { transition: all 0.3s ease; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
-        .cta-button:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 6px 25px rgba(0,0,0,0.3); }
+        .cta-button {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        .cta-button:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 6px 25px rgba(0,0,0,0.3);
+        }
         #encuesta-container, #results-container { transition: opacity 0.5s ease-in-out; }
-        .pregunta-wrapper { transition: transform 0.4s ease-in-out, opacity 0.4s ease-in-out; will-change: transform, opacity; }
+        .pregunta-wrapper {
+            transition: transform 0.4s ease-in-out, opacity 0.4s ease-in-out;
+            will-change: transform, opacity;
+        }
         .pregunta-wrapper.entering { opacity: 0; transform: translateX(100px); }
         .pregunta-wrapper.leaving { opacity: 0; transform: translateX(-100px); }
         .option-button { transition: all 0.2s ease; }
-        .option-button:hover { transform: translateX(5px); border-color: #F59E0B; }
-        .option-button.selected { background-color: #10B981; color: white; border-color: #10B981; }
-        .loader { border: 8px solid #f3f3f3; border-top: 8px solid #3498db; border-radius: 50%; width: 80px; height: 80px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .option-button:hover {
+            transform: translateX(5px);
+            border-color: #F59E0B; /* Tailwind yellow-500 */
+        }
+        .option-button.selected {
+             background-color: #10B981;
+             color: white;
+             border-color: #10B981;
+        }
+        /* Loading animation */
+        .loader {
+            border: 8px solid #f3f3f3; /* Light grey */
+            border-top: 8px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -81,7 +111,7 @@
                     <div class="bg-gray-700 p-8 rounded-2xl shadow-lg transform hover:scale-105 transition-transform duration-300">
                         <div class="text-5xl mb-4">📲</div>
                         <h3 class="text-2xl font-bold mb-2 font-montserrat">3. Comparte</h3>
-                        <p class="text-gray-300">Obtén tu resultado, compáralo con amigos e inicia la conversación. ¡Revisa tu email!</p>
+                        <p class="text-gray-300">Obtén una infografía personalizada, lista para compartir y comparar con tus amigos. ¡Inicia la conversación!</p>
                     </div>
                 </div>
             </div>
@@ -91,20 +121,20 @@
         <section class="py-20 px-4 bg-gray-900">
              <div class="container mx-auto max-w-6xl flex flex-col lg:flex-row items-center gap-12">
                 <div class="lg:w-1/2">
-                    <h2 class="text-4xl font-bold font-montserrat mb-4">No solo datos, un resultado <span class="text-yellow-300">para iniciar el debate</span>.</h2>
+                    <h2 class="text-4xl font-bold font-montserrat mb-4">No solo datos, un resultado <span class="text-yellow-300">digno de compartir</span>.</h2>
                     <p class="text-gray-300 text-lg mb-6">
-                        Cada resultado te ubica en el mapa político de Guerrero. Ve más allá de "izquierda" o "derecha" y descubre los matices de tu pensamiento.
+                        Cada resultado es una infografía visualmente atractiva que resume tu postura. Es informativa, personal y perfecta para redes sociales. Ve más allá de "izquierda" o "derecha" y descubre los matices de tu pensamiento.
                     </p>
                     <ul class="space-y-3 text-gray-300">
-                        <li class="flex items-center"><span class="text-green-400 mr-2">✔️</span> 9 Perfiles políticos detallados.</li>
-                        <li class="flex items-center"><span class="text-green-400 mr-2">✔️</span> Ubicación en el mapa político.</li>
-                        <li class="flex items-center"><span class="text-green-400 mr-2">✔️</span> Estadísticas de tus prioridades.</li>
+                        <li class="flex items-center"><span class="text-green-400 mr-2">✔️</span> Perfil político detallado.</li>
+                        <li class="flex items-center"><span class="text-green-400 mr-2">✔️</span> Tema prioritario y estilo de liderazgo.</li>
+                        <li class="flex items-center"><span class="text-green-400 mr-2">✔️</span> Dato sorpresa para iniciar el debate.</li>
                     </ul>
                 </div>
                 <div class="lg:w-1/2 flex justify-center">
                      <div class="w-full max-w-sm bg-gray-800 p-4 rounded-2xl shadow-2xl transform rotate-3">
                          <div class="bg-gradient-to-br from-green-500 to-blue-600 p-6 rounded-lg text-white font-sans">
-                             <h3 class="text-2xl font-bold text-center font-montserrat">TU PERFIL POLÍTICO</h3>
+                             <h3 class="text-2xl font-bold text-center font-montserrat">MI PERFIL POLÍTICO</h3>
                              <p class="text-center text-sm text-gray-200 mb-4">Guerrero 2025</p>
                              <div class="bg-white text-gray-900 text-center py-2 px-4 rounded-lg mb-4">
                                  <p class="text-xl font-bold font-montserrat">Centrista Pragmático</p>
@@ -115,6 +145,11 @@
                              <div class="space-y-2">
                                  <p><span class="font-bold">📊 Tema:</span> Económico</p>
                                  <p><span class="font-bold">👤 Liderazgo:</span> Dialogante</p>
+                                 <p><span class="font-bold">📍 Municipio:</span> Chilpancingo</p>
+                             </div>
+                             <div class="mt-4 text-center text-yellow-300 font-bold">
+                                 <p>DESCUBRE EL TUYO EN:</p>
+                                 <p class="text-lg">MiPerfilGuerrero.com</p>
                              </div>
                          </div>
                      </div>
@@ -216,7 +251,7 @@
           { id: 10, pregunta: "Para mí, un buen gobierno debe ser principalmente...", tipo: "opcion_multiple", opciones: [ { id: "A", texto: "Eficiente y que resuelva rápido ⚡", valor_x: 40, valor_y: 40, valor: "Eficiencia" }, { id: "B", texto: "Honesto y transparente 💎", valor_x: 60, valor_y: 50, valor: "Transparencia" }, { id: "C", texto: "Cercano al pueblo y que escuche 👂", valor_x: 75, valor_y: 70, valor: "Participación" }, { id: "D", texto: "Firme y que haga respetar la ley ⚖️", valor_x: 30, valor_y: 80, valor: "Autoridad" }, { id: "E", texto: "Innovador con nuevas ideas 💡", valor_x: 70, valor_y: 55, valor: "Innovación" } ] }
         ];
         const preguntaBonus = { id: 11, pregunta: "¿De qué municipio de Guerrero eres? (Opcional)", tipo: "desplegable", opciones: [ "Prefiero no decir", "Acapulco de Juárez", "Chilpancingo de los Bravo", "Iguala de la Independencia", "Zihuatanejo de Azueta", "Chilapa de Álvarez", "Tlapa de Comonfort", "Taxco de Alarcón", "Otro municipio de Guerrero", "Vivo fuera de Guerrero" ] };
-        const preguntaContacto = { id: 12, pregunta: "¡Estás a un paso de tu resultado!", tipo: "contacto", texto: "Recibe tu resultado por email y compártelo. Es opcional." };
+        const preguntaContacto = { id: 12, pregunta: "¡Estás a un paso de tu resultado!", tipo: "contacto", texto: "Recibe tu resultado personalizado. Es opcional." };
 
         const allQuestions = [...preguntas, preguntaBonus, preguntaContacto];
 
@@ -231,7 +266,11 @@
 
         function displayQuestion() {
             const pregunta = allQuestions[currentQuestionIndex];
-            const progress = (currentQuestionIndex / (preguntas.length + 1)) * 100;
+            let progress = (currentQuestionIndex / (preguntas.length + 1)) * 100;
+            // Corregir el progreso para la última pregunta
+            if (pregunta.tipo === 'contacto') {
+                progress = 100;
+            }
             
             let contentHtml = '';
             
@@ -287,7 +326,7 @@
             finishSurvey();
         }
 
-        // --- FUNCIÓN DE ENCUESTA ACTUALIZADA (CON TIMEOUT DE 8 SEGUNDOS) ---
+        // --- FUNCIÓN DE ENCUESTA ACTUALIZADA ---
         async function finishSurvey() {
             const wrapper = preguntaActualDiv.querySelector('.pregunta-wrapper');
             wrapper?.classList.add('leaving');
@@ -296,18 +335,17 @@
                 displayLoadingScreen();
             }, 400);
 
-            // PREPARAMOS LOS DATOS PARA ENVIAR
             const contactInfoWrapper = userAnswers.find(r => r.pregunta_id === 12) || {};
             const surveyAnswers = userAnswers.filter(r => r.pregunta_id !== 12);
-
-            // --- INICIO DE CAMBIOS: AÑADIMOS TIMEOUT ---
+            
+            // AbortController para manejar timeouts
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 segundos
-            // --- FIN DE CAMBIOS ---
+            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 segundos de espera
 
             try {
                 // LLAMADA A NUESTRA API EN VERCEL
-                const response = await fetch('/api/procesar', {
+                // Usamos la URL absoluta del despliegue en Vercel
+                const response = await fetch('https://mapa-politico-guerrero.vercel.app/api/procesar', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -317,59 +355,52 @@
                             email: contactInfoWrapper.email 
                         }
                     }),
-                    signal: controller.signal // --- AÑADIMOS EL ABORT SIGNAL ---
+                    signal: controller.signal // Asignamos el controlador de abort
                 });
+                
+                // Limpiamos el timeout si la respuesta llega a tiempo
+                clearTimeout(timeoutId);
 
-                clearTimeout(timeoutId); // --- Limpiamos el timeout si la respuesta fue rápida
-
-                // Si la respuesta no es OK (ej. 404, 500), capturamos el error
                 if (!response.ok) {
-                    const errorData = await response.json(); // Vercel envía errores como JSON
-                    // Lanzamos un error con el mensaje del servidor
-                    throw new Error(errorData.message || `Error del servidor: ${response.status}`);
+                    // Intentamos leer el error que envía el servidor
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.message || `Error del servidor: ${response.status} ${response.statusText}`);
                 }
 
                 const result = await response.json();
                 
                 if (result.success && result.perfil) {
-                    // USAMOS EL PERFIL CALCULADO POR EL BACKEND PARA MOSTRAR LOS RESULTADOS
                     displayResultsPage(result.perfil);
                 } else {
                     throw new Error(result.message || 'Error al procesar el perfil.');
                 }
 
             } catch (error) {
+                clearTimeout(timeoutId);
                 console.error("Error al contactar al backend:", error);
                 
-                // --- INICIO DE CAMBIOS: MANEJO DE TIMEOUT ---
+                let errorMessage = 'Hubo un error al procesar tus resultados.';
                 if (error.name === 'AbortError') {
-                    error.message = 'El servidor está tardando mucho en responder. (Timeout)';
-                }
-                // --- FIN DE CAMBIOS ---
-
-                // Limpiamos el intervalo de carga aunque haya error
-                const intervalId = preguntaActualDiv.dataset.intervalId;
-                if (intervalId) {
-                    clearInterval(intervalId);
+                    errorMessage = 'El servidor está tardando mucho en responder. Revisa la configuración de Vercel.';
+                } else if (error.message) {
+                    errorMessage = `Error: ${error.message}`;
                 }
 
                 // Mostramos el error en la pantalla de carga, sin usar alert()
                 const loadingMessage = document.getElementById('loading-message');
                 if (loadingMessage) {
-                    // Mostramos el mensaje de error que recibimos del servidor
-                    loadingMessage.innerText = `Error: ${error.message}. Revisa la configuración de Vercel.`;
-                    loadingMessage.classList.add('text-red-400'); // Hacemos el error visible
+                    loadingMessage.innerText = errorMessage;
                 }
                 const loader = document.querySelector('.loader');
                 if (loader) {
-                    loader.style.display = 'none'; // Ocultamos la animación
+                    loader.style.display = 'none';
                 }
             }
         }
         // ----------------------------------------
 
         function displayLoadingScreen() {
-            const mensajes = ["Analizando tus respuestas...", "Calculando tu perfil...", "Mapeando tu posición política..."];
+            const mensajes = ["Calculando tu perfil...", "Analizando tus respuestas...", "Mapeando tu posición política..."];
             let mensajeIndex = 0;
             
             const loadingHTML = `
@@ -379,18 +410,18 @@
                 </div>`;
             preguntaActualDiv.innerHTML = loadingHTML;
             
-            // Este intervalo se detendrá cuando se muestren los resultados o haya un error
-            preguntaActualDiv.dataset.intervalId = setInterval(() => {
+            const interval = setInterval(() => {
                 mensajeIndex = (mensajeIndex + 1) % mensajes.length;
                 const loadingMessage = document.getElementById('loading-message');
-                if (loadingMessage && !loadingMessage.innerText.startsWith("Error")) { // No cambiar si hay error
+                if (loadingMessage && loader) { // Solo actualiza si el loader está visible
                     loadingMessage.innerText = mensajes[mensajeIndex];
                 }
-            }, 1000);
+            }, 2000);
+
+            preguntaActualDiv.dataset.intervalId = interval;
         }
 
         function displayResultsPage(perfil) {
-            // Limpiar el intervalo de la pantalla de carga
             const intervalId = preguntaActualDiv.dataset.intervalId;
             if (intervalId) {
                 clearInterval(intervalId);
@@ -402,7 +433,6 @@
             resultsContainer.style.display = 'block';
             setTimeout(() => resultsContainer.style.opacity = 1, 510);
             
-            // HTML DE RESULTADOS SIMPLIFICADO
             const resultsHTML = `
                 <div class="max-w-4xl mx-auto py-12 px-4">
                     <div class="bg-gray-800 rounded-2xl shadow-xl p-8 mb-8 text-center">
@@ -428,31 +458,36 @@
                         </div>
                     </div>
 
-                    <div class="bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
-                        <h2 class="text-2xl font-bold mb-4">¡Comparte tu resultado!</h2>
-                        <p class="text-center text-gray-400 mb-4">¡Invita a tus amigos a descubrir su perfil! Revisa tu email (si lo proporcionaste) para ver tu resultado.</p>
+                    <div class="bg-gray-800 rounded-2xl shadow-xl p-8">
+                        <h2 class="text-2xl font-bold mb-4 text-center">¡Inicia la conversación!</h2>
+                        <p class="text-center text-gray-400 mb-4">Compara tu resultado con tus amigos y familiares.</p>
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mt-8">
-                            <button class="bg-green-500 hover:bg-green-600 p-3 rounded-lg font-bold">Compartir en WhatsApp</button>
-                            <button class="bg-blue-600 hover:bg-blue-700 p-3 rounded-lg font-bold">Compartir en Facebook</button>
-                            <button class="bg-blue-400 hover:bg-blue-500 p-3 rounded-lg font-bold">Compartir en Twitter</button>
+                            <button class="bg-green-500 hover:bg-green-600 p-3 rounded-lg font-bold">WhatsApp</button>
+                            <button class="bg-blue-600 hover:bg-blue-700 p-3 rounded-lg font-bold">Facebook</button>
+                            <button class="bg-blue-400 hover:bg-blue-500 p-3 rounded-lg font-bold">Twitter</button>
                         </div>
                     </div>
                 </div>
             `;
             resultsContent.innerHTML = resultsHTML;
         }
-        
+
         function handleAnswer(answerData) { userAnswers.push({pregunta_id: allQuestions[currentQuestionIndex].id, respuesta: answerData}); nextQuestion(); }
         function handleScaleAnswer(preguntaId) { const value = document.getElementById(`escala-${preguntaId}`).value; userAnswers.push({pregunta_id: preguntaId, valor: parseInt(value)}); nextQuestion(); }
         function handleCheckboxAnswer(preguntaId) { const selected = []; document.querySelectorAll(`input[type="checkbox"]:checked`).forEach(el => selected.push(JSON.parse(el.dataset.opcion))); userAnswers.push({pregunta_id: preguntaId, seleccionados: selected}); nextQuestion(); }
         function handleDropdownAnswer(preguntaId) { const value = document.getElementById(`desplegable-${preguntaId}`).value; userAnswers.push({pregunta_id: preguntaId, valor: value}); nextQuestion(); }
         function updateCheckboxCount(checkbox, max) { const checkedCount = document.querySelectorAll('input[type="checkbox"]:checked').length; const nextButton = document.getElementById('next-checkbox'); if (checkedCount > max) checkbox.checked = false; nextButton.disabled = !(checkedCount >= 1 && checkedCount <= max); nextButton.classList.toggle('opacity-50', nextButton.disabled); }
+        
         function nextQuestion() {
             const wrapper = preguntaActualDiv.querySelector('.pregunta-wrapper');
-            if (wrapper) wrapper.classList.add('leaving');
+            if (wrapper) {
+                wrapper.classList.add('leaving');
+            }
             setTimeout(() => {
                 currentQuestionIndex++;
-                if (currentQuestionIndex < allQuestions.length) displayQuestion();
+                if (currentQuestionIndex < allQuestions.length) {
+                    displayQuestion();
+                }
             }, 400);
         }
 
@@ -460,7 +495,7 @@
              const counterElement = document.getElementById('counter');
             if (counterElement) {
                 let start = 15742;
-                setInterval(() => {
+                const interval = setInterval(() => {
                     start += Math.floor(Math.random() * 3) + 1;
                     counterElement.innerText = start.toLocaleString('es-MX');
                 }, 2500);
