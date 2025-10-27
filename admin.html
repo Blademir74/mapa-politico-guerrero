@@ -72,35 +72,45 @@
         // Contraseña simple para el dashboard
         const ADMIN_PASSWORD = 'guerrero2025'; 
 
-        // --- LÓGICA DE AUTENTICACIÓN ---
-        const loginButton = document.getElementById('login-button');
-        const passwordInput = document.getElementById('admin-password');
-        const errorMsg = document.getElementById('error-msg');
-        const passwordPrompt = document.getElementById('password-prompt');
-        const dashboardContent = document.getElementById('dashboard-content');
-        // --- CONFIGURACIÓN DE SUPABASE ---
-        // ¡IMPORTANTE! PEGA TUS LLAVES AQUÍ
-        const SUPABASE_URL = 'https://kezgjbyyztmkhewvgrxq.supabase.co'; // Esta ya está
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlemdqYnl5enRta2hld3ZncnhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExNDM3NTIsImV4cCI6MjA3NjcxOTc1Mn0.iOFHwFLrFYb29G2WnK2Gm94yLKserA84ty9rEOjZR4o)';
-        // Contraseña simple para el dashboard
-        const ADMIN_PASSWORD = 'guerrero2025';
-        loginButton.onclick = () => {
-            if (passwordInput.value === ADMIN_PASSWORD) {
-                passwordPrompt.style.display = 'none';
-                dashboardContent.style.display = 'block';
-                loadDashboardData();
-            } else {
-                errorMsg.innerText = 'Contraseña incorrecta.';
-                errorMsg.style.display = 'block';
+        // --- LÓGICA DE AUTENTICACIÓN Y CARGA DE DATOS ---
+        // Esperamos a que todo el HTML esté cargado antes de ejecutar el script
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginButton = document.getElementById('login-button');
+            const passwordInput = document.getElementById('admin-password');
+            const errorMsg = document.getElementById('error-msg');
+            const passwordPrompt = document.getElementById('password-prompt');
+            const dashboardContent = document.getElementById('dashboard-content');
+            // --- CONFIGURACIÓN DE SUPABASE ---
+            // ¡IMPORTANTE! PEGA TUS LLAVES AQUÍ
+            const SUPABASE_URL = 'https://kezgjbyyztmkhewvgrxq.supabase.co'; // Esta ya está
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlemdqYnl5enRta2hld3ZncnhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExNDM3NTIsImV4cCI6MjA3NjcxOTc1Mn0.iOFHwFLrFYb29G2WnK2Gm94yLKserA84ty9rEOjZR4o';
+            // Contraseña simple para el dashboard
+            const ADMIN_PASSWORD = 'guerrero2025';
+            // Solo asignamos los listeners si los botones existen
+            if (loginButton && passwordInput) {
+                loginButton.onclick = () => {
+                    if (passwordInput.value === ADMIN_PASSWORD) {
+                        passwordPrompt.style.display = 'none';
+                        dashboardContent.style.display = 'block';
+                        loadDashboardData();
+                    } else {
+                        errorMsg.innerText = 'Contraseña incorrecta.';
+                        errorMsg.style.display = 'block';
+                    }
+                };
+            
+                passwordInput.onkeyup = (e) => { 
+                    if (e.key === 'Enter') {
+                        loginButton.click();
+                    }
+                };
             }
-        };
-        passwordInput.onkeyup = (e) => { if (e.key === 'Enter') loginButton.click(); }
-
+        });
 
         // --- LÓGICA DEL DASHBOARD ---
         async function loadDashboardData() {
             if (!SUPABASE_URL || SUPABASE_ANON_KEY === 'pega_aqui_tu_llave_ANON_PUBLIC') {
-                alert('ERROR: Debes editar el archivo admin.html y pegar tus llaves de Supabase.');
+                alert('ERROR: Debes editar el archivo admin.html y pegar tus llaves de Supabase (líneas 81-82).');
                 return;
             }
 
@@ -156,3 +166,4 @@
     </script>
 </body>
 </html>
+
