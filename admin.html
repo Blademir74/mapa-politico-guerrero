@@ -78,6 +78,7 @@
         // --- LÓGICA DE AUTENTICACIÓN Y CARGA DE DATOS ---
         // Esperamos a que todo el HTML esté cargado antes de ejecutar el script
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM Cargado. Asignando listeners...');
             const loginButton = document.getElementById('login-button');
             const passwordInput = document.getElementById('admin-password');
             const errorMsg = document.getElementById('error-msg');
@@ -86,12 +87,16 @@
             
             // Solo asignamos los listeners si los botones existen
             if (loginButton && passwordInput) {
+                console.log('Botón de Login encontrado.');
                 loginButton.onclick = () => {
+                    console.log('Botón de Login clickeado.');
                     if (passwordInput.value === ADMIN_PASSWORD) {
+                        console.log('Contraseña correcta. Mostrando dashboard...');
                         passwordPrompt.style.display = 'none';
                         dashboardContent.style.display = 'block';
                         loadDashboardData();
                     } else {
+                        console.log('Contraseña incorrecta.');
                         errorMsg.innerText = 'Contraseña incorrecta.';
                         errorMsg.style.display = 'block';
                     }
@@ -102,20 +107,26 @@
                         loginButton.click();
                     }
                 };
+            } else {
+                console.error('No se encontró el botón de login o el input de password.');
             }
         });
 
-        // --- LÓGICA DEL DASHBOARD (MODIFICADA) ---
+        // --- LÓGICA DEL DASHBOARD (MODIFICADA PARA MOSTRAR ERROR) ---
         async function loadDashboardData() {
+            console.log('loadDashboardData() iniciado...');
+            
             // Esta alerta te avisará si no has pegado la llave
             if (!SUPABASE_URL || SUPABASE_ANON_KEY === 'PEGA_AQUI_TU_LLAVE_ANON_PUBLIC_(la que empieza con ey...)') {
                 alert('ERROR: Debes editar el archivo admin.html y pegar tu llave de Supabase (línea 71).');
                 return;
             }
 
+            console.log('Creando cliente de Supabase...');
             const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             
             // Cargar datos
+            console.log('Consultando tabla "participaciones"...');
             const { data, error } = await supabase
                 .from('participaciones')
                 .select('*')
@@ -123,14 +134,33 @@
 
             // --- ESTA ES LA PARTE NUEVA ---
             if (error) {
-                console.error('Error al cargar datos:', error);
-                // Mostrar el error real en la pantalla
+                console.error('--- ERROR DE SUPABASE ---');
+                console.error(error.message);
+                console.error(error);
+                console.error('--- FIN DEL ERROR ---');
+                
+                // Mostrar el error real en la pantalla, en la tabla
                 document.getElementById('total-participantes').innerText = 'Error';
-                alert(`ERROR AL CARGAR DATOS:\n${error.message}\n\nAsegúrate de haber pegado la llave "anon public" y no la "service_role".`);
+                document.getElementById('top-municipio').innerText = 'Error';
+                document.getElementById('top-perfil').innerText = 'Error';
+                
+                const tablaBody = document.getElementById('tabla-registros');
+                tablaBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="p-4 text-center text-red-400">
+                            <strong class="text-lg">Error al Cargar Datos:</strong><br>
+                            <span class="text-sm font-mono">${error.message}</span>
+                            <br><br>
+                            <span class="text-xs">Verifica que tu llave ANON_KEY en la línea 71 sea la "anon public" y no la "service_role".</span>
+                        </td>
+                    </tr>
+                `;
                 return;
             }
             // --- FIN DE LA PARTE NUEVA ---
 
+            console.log('Datos recibidos exitosamente:', data.length, 'registros.');
+            
             // --- 1. Calcular Métricas ---
             document.getElementById('total-participantes').innerText = data.length.toLocaleString('es-MX');
 
@@ -144,6 +174,11 @@
             const tablaBody = document.getElementById('tabla-registros');
             tablaBody.innerHTML = ''; // Limpiar
             
+            if (data.length === 0) {
+                 tablaBody.innerHTML = '<tr><td colspan="4" class="p-4 text-center">Aún no hay participaciones registradas.</td></tr>';
+                 return;
+            }
+
             data.slice(0, 50).forEach(registro => { // Mostrar los últimos 50
                 const tr = document.createElement('tr');
                 tr.className = 'border-b border-gray-700 hover:bg-gray-700';
