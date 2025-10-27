@@ -66,9 +66,14 @@
 
     <script>
         // --- CONFIGURACIÓN DE SUPABASE ---
-        // ¡IMPORTANTE! PEGA TUS LLAVES AQUÍ
-        const SUPABASE_URL = 'https://kezgjbyyztnkhewgrxq.supabase.co'; // Tu URL de la imagen
-        const SUPABASE_ANON_KEY = 'pega_aqui_tu_llave_ANON_PUBLIC'; // Tu llave ANON de la imagen
+        // ¡IMPORTANTE! PEGA TUS LLAVES AQUÍ (LÍNEA 70-71)
+        // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+
+        const SUPABASE_URL = 'https://kezgjbyyztnkhewgrxq.supabase.co'; // Esta URL ya está bien
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlemdqYnl5enRta2hld3ZncnhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExNDM3NTIsImV4cCI6MjA3NjcxOTc1Mn0.iOFHwFLrFYb29G2WnK2Gm94yLKserA84ty9rEOjZR4o'; // <-- ¡PÉGALA AQUÍ!
+        
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+        
         // Contraseña simple para el dashboard
         const ADMIN_PASSWORD = 'guerrero2025'; 
 
@@ -80,12 +85,7 @@
             const errorMsg = document.getElementById('error-msg');
             const passwordPrompt = document.getElementById('password-prompt');
             const dashboardContent = document.getElementById('dashboard-content');
-            // --- CONFIGURACIÓN DE SUPABASE ---
-            // ¡IMPORTANTE! PEGA TUS LLAVES AQUÍ
-            const SUPABASE_URL = 'https://kezgjbyyztmkhewvgrxq.supabase.co'; // Esta ya está
-            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlemdqYnl5enRta2hld3ZncnhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExNDM3NTIsImV4cCI6MjA3NjcxOTc1Mn0.iOFHwFLrFYb29G2WnK2Gm94yLKserA84ty9rEOjZR4o';
-            // Contraseña simple para el dashboard
-            const ADMIN_PASSWORD = 'guerrero2025';
+            
             // Solo asignamos los listeners si los botones existen
             if (loginButton && passwordInput) {
                 loginButton.onclick = () => {
@@ -109,8 +109,9 @@
 
         // --- LÓGICA DEL DASHBOARD ---
         async function loadDashboardData() {
-            if (!SUPABASE_URL || SUPABASE_ANON_KEY === 'pega_aqui_tu_llave_ANON_PUBLIC') {
-                alert('ERROR: Debes editar el archivo admin.html y pegar tus llaves de Supabase (líneas 81-82).');
+            // Esta alerta te avisará si no has pegado la llave
+            if (!SUPABASE_URL || SUPABASE_ANON_KEY === 'PEGA_AQUI_TU_LLAVE_ANON_PUBLIC_(la que empieza con ey...)') {
+                alert('ERROR: Debes editar el archivo admin.html y pegar tu llave de Supabase (línea 71).');
                 return;
             }
 
@@ -125,6 +126,10 @@
             if (error) {
                 console.error('Error al cargar datos:', error);
                 document.getElementById('total-participantes').innerText = 'Error';
+                // Si la tabla 'participaciones' no tiene RLS de LECTURA habilitado, fallará aquí.
+                if (error.message.includes('security policy')) {
+                    alert('Error de Seguridad de Supabase: Habilita el permiso de LECTURA (SELECT) para la tabla "participaciones".');
+                }
                 return;
             }
 
