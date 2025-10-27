@@ -105,7 +105,7 @@
             }
         });
 
-        // --- LÓGICA DEL DASHBOARD ---
+        // --- LÓGICA DEL DASHBOARD (MODIFICADA) ---
         async function loadDashboardData() {
             // Esta alerta te avisará si no has pegado la llave
             if (!SUPABASE_URL || SUPABASE_ANON_KEY === 'PEGA_AQUI_TU_LLAVE_ANON_PUBLIC_(la que empieza con ey...)') {
@@ -121,15 +121,15 @@
                 .select('*')
                 .order('created_at', { ascending: false }); // Ordenar por fecha
 
+            // --- ESTA ES LA PARTE NUEVA ---
             if (error) {
                 console.error('Error al cargar datos:', error);
+                // Mostrar el error real en la pantalla
                 document.getElementById('total-participantes').innerText = 'Error';
-                // Si la tabla 'participaciones' no tiene RLS de LECTURA habilitado, fallará aquí.
-                if (error.message.includes('security policy')) {
-                    alert('Error de Seguridad de Supabase: Habilita el permiso de LECTURA (SELECT) para la tabla "participaciones".');
-                }
+                alert(`ERROR AL CARGAR DATOS:\n${error.message}\n\nAsegúrate de haber pegado la llave "anon public" y no la "service_role".`);
                 return;
             }
+            // --- FIN DE LA PARTE NUEVA ---
 
             // --- 1. Calcular Métricas ---
             document.getElementById('total-participantes').innerText = data.length.toLocaleString('es-MX');
