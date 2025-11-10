@@ -1,247 +1,268 @@
-// Importamos el cliente de Supabase
 import { createClient } from '@supabase/supabase-js';
 
-// === AUTENTICACIÓN SEGURA ===
-// En lugar de contraseña hardcodeada, usar JWT o session tokens
-// Por ahora, usar hash de contraseña desde variable de entorno
-const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH; // Hash bcrypt de la contraseña
-const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET; // Para tokens JWT
+// Variables de entorno ESENCIALES
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+// Verificar variables críticas
+if (!supabaseUrl || !supabaseAnonKey) {
+    console.error("❌ ERROR: Faltan variables de entorno de Supabase");
+    console.log("SUPABASE_URL:", supabaseUrl ? "✅ Configurada" : "❌ Falta");
+    console.log("SUPABASE_ANON_KEY:", supabaseAnonKey ? "✅ Configurada" : "❌ Falta");
+    throw new Error("Configuración de Supabase incompleta");
+}
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+function calculatePoliticalProfile(respuestas) {
+    console.log("🧠 Calculando perfil con", respuestas.length, "respuestas");
+    
+    let suma_x = 0, suma_y = 0;
+    let temas = [];
+    let municipio_info = "No especificado";
+    
+    respuestas.forEach(r => {
+        try {
+            // Procesar respuesta normal
+            if (r.respuesta) {
+                if (r.respuesta.valor_x !== undefined) suma_x += r.respuesta.valor_x;
+                if (r.respuesta.valor_y !== undefined) suma_y += r.respuesta.valor_y;
+                if (r.respuesta.tema) temas.push(r.respuesta.tema);
+                if (r.respuesta.municipio) municipio_info = r.respuesta.municipio;
+            }
+            
+            // Procesar selecciones múltiples
+            if (r.seleccionados && Array.isArray(r.seleccionados)) {
+                r.seleccionados.forEach(opcion => {
+                    if (opcion.tema) temas.push(opcion.tema);
+                    if (opcion.boost_y) suma_y += opcion.boost_y;
+                });
+            }
+            
+            // Procesar valor específico
+            if (r.pregunta_id === 2 && r.valor) {
+                suma_y += (r.valor * 7);
+            }
+            
+            // Procesar municipio por geolocalización
+            if (r.pregunta_id === 11 && r.municipio) {
+                municipio_info = r.municipio;
+            }
+        } catch (error) {
+            console.error("Error procesando respuesta:", r, error);
+        }
+    });
+    
+    // Calcular promedio
+    const promedio_x = respuestas.length > 0 ? suma_x / respuestas.length : 0;
+    const promedio_y = respuestas.length > 0 ? suma_y / respuestas.length : 0;
+    
+    console.log(`📊 Perfil calculado - X: ${promedio_x.toFixed(2)}, Y: ${promedio_y.toFixed(2)}`);
+    
+    // Determinar posición política
+    let posicion = "";
+    let etiqueta = "";
+    let descripcion = "";
+    
+    if (promedio_x <= 2 && promedio_y <= 2) {
+        posicion = "Izquierda-Contralismo";
+        etiqueta = "Liberal Progresista";
+        descripcion = "Valoras la innovación y el cambio, con una visión social sólida.";
+    } else if (promedio_x <= 2 && promedio_y > 2) {
+        posicion = "Izquierda-Centralismo";
+        etiqueta = "Social-Democrata";
+        descripcion = "Prefieres un gobierno fuerte con políticas sociales robustas.";
+    } else if (promedio_x > 2 && promedio_x <= 3 && promedio_y <= 2) {
+        posicion = "Centro-Contralismo";
+        etiqueta = "Centrista Liberal";
+        descripcion = "Buscas el equilibrio entre libertad individual y orden social.";
+    } else if (promedio_x > 2 && promedio_x <= 3 && promedio_y > 2) {
+        posicion = "Centro-Centralismo";
+        etiqueta = "Centrista Institucional";
+        descripcion = "Valoras la estabilidad y el funcionamiento institucional.";
+    } else if (promedio_x > 3 && promedio_y <= 2) {
+        posicion = "Derecha-Contralismo";
+        etiqueta = "Liberal Conservador";
+        descripcion = "Prefieres el libre mercado con valores tradicionales.";
+    } else {
+        posicion = "Derecha-Centralismo";
+        etiqueta = "Conservador Tradicional";
+        descripcion = "Valoras la tradición, el orden y la autoridad establecida.";
+    }
+    
+    // Eliminar duplicados de temas
+    temas = [...new Set(temas)];
+    
+    return {
+        etiqueta: etiqueta,
+        descripcion: descripcion,
+        posicion: posicion,
+        promedio_x: parseFloat(promedio_x.toFixed(2)),
+        promedio_y: parseFloat(promedio_y.toFixed(2)),
+        temas: temas,
+        municipio: municipio_info,
+        fecha: new Date().toISOString()
+    };
+}
+
+async function saveToSupabase(perfil, contactInfo, analytics) {
+    try {
+        console.log("💾 Guardando en Supabase...");
+        
+        const dataToSave = {
+            perfil_etiqueta: perfil.etiqueta,
+            perfil_descripcion: perfil.descripcion,
+            perfil_posicion: perfil.posicion,
+            promedio_x: perfil.promedio_x,
+            promedio_y: perfil.promedio_y,
+            temas_interes: JSON.stringify(perfil.temas),
+            municipio: perfil.municipio,
+            email: contactInfo?.email || null,
+            nombre: contactInfo?.nombre || null,
+            telefono: contactInfo?.telefono || null,
+            ip_address: analytics?.ip || null,
+            user_agent: analytics?.userAgent || null,
+            referrer: analytics?.referrer || null,
+            utm_source: analytics?.utm?.source || null,
+            utm_medium: analytics?.utm?.medium || null,
+            utm_campaign: analytics?.utm?.campaign || null,
+            created_at: new Date().toISOString()
+        };
+        
+        const { data, error } = await supabase
+            .from('participacion_mapa_politico')
+            .insert([dataToSave])
+            .select();
+            
+        if (error) {
+            console.error("❌ Error en Supabase:", error);
+            return false;
+        }
+        
+        console.log("✅ Guardado en Supabase exitosamente");
+        return true;
+        
+    } catch (error) {
+        console.error("❌ Error guardando en Supabase:", error);
+        return false;
+    }
+}
 
 export default async function handler(request, response) {
-    // 1. Verificar que sea un método POST
-    if (request.method !== 'POST') {
-        return response.status(405).json({ 
-            success: false, 
-            message: 'Método no permitido',
-            timestamp: new Date().toISOString()
-        });
-    }
-
+    const startTime = Date.now();
+    
     try {
-        // 2. Verificar las variables de entorno críticas
-        const supabaseUrl = process.env.SUPABASE_URL;
-        const supabaseKey = process.env.SUPABASE_ANON_KEY;
-
-        if (!supabaseUrl || !supabaseKey) {
-            console.error('❌ GET-DATA: Faltan variables de entorno de Supabase en Vercel.');
-            return response.status(500).json({ 
+        console.log("🚀 PROCESAR: Nueva solicitud iniciada -", new Date().toISOString());
+        
+        // Solo aceptar POST
+        if (request.method !== 'POST') {
+            console.log("❌ PROCESAR: Método no permitido:", request.method);
+            return response.status(405).json({ 
                 success: false, 
-                message: 'Error de configuración del servidor.',
-                timestamp: new Date().toISOString()
+                message: 'Método no permitido. Use POST.' 
             });
         }
 
-        // 3. Verificar headers de autenticación
-        const authHeader = request.headers.authorization;
-        const { password } = request.body;
-
-        // Métodos de autenticación seguros
-        let isAuthenticated = false;
-
-        // Método 1: JWT Token
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            const token = authHeader.substring(7);
-            isAuthenticated = await verifyJWTToken(token);
-        }
+        // Extraer datos del request
+        const { userAnswers, contactInfo, userAgent, timestamp, municipality, referrer, utm } = request.body;
         
-        // Método 2: Password hasheada (método seguro temporal)
-        if (!isAuthenticated && password && ADMIN_PASSWORD_HASH) {
-            isAuthenticated = await verifyPassword(password, ADMIN_PASSWORD_HASH);
-        }
+        console.log("📥 PROCESAR: Datos recibidos");
+        console.log("  - Respuestas:", userAnswers?.length || 0);
+        console.log("  - Contacto:", contactInfo?.email ? "Sí" : "No");
+        console.log("  - Municipio:", municipality);
+        console.log("  - UTM:", utm);
 
-        if (!isAuthenticated) {
-            console.log('❌ GET-DATA: Autenticación fallida');
-            return response.status(401).json({ 
+        // Validación básica
+        if (!userAnswers || !Array.isArray(userAnswers) || userAnswers.length === 0) {
+            console.log("❌ PROCESAR: No se recibieron respuestas válidas");
+            return response.status(400).json({ 
                 success: false, 
-                message: 'No autorizado',
-                timestamp: new Date().toISOString()
+                message: 'No se recibieron respuestas válidas del cuestionario.' 
             });
         }
 
-        // 4. Conectarse a Supabase (desde el servidor)
-        const supabase = createClient(supabaseUrl, supabaseKey);
-        
-        console.log('📊 GET-DATA: Consultando base de datos...');
-        
-        // 5. Obtener datos con filtros y ordenamiento
-        const { data, error } = await supabase
-            .from('participaciones')
-            .select(`
-                *,
-                created_at,
-                perfil_calculado,
-                municipio,
-                contacto
-            `)
-            .order('created_at', { ascending: false })
-            .limit(1000); // Limitar para performance
+        // Calcular perfil
+        console.log("🧠 PROCESAR: Calculando perfil político...");
+        const perfil = calculatePoliticalProfile(userAnswers);
+        console.log("✅ PROCESAR: Perfil calculado:", perfil.etiqueta);
 
-        if (error) {
-            console.error('❌ GET-DATA: Error al consultar Supabase:', error.message);
-            
-            // Log del error para debugging
-            logAnalyticsEvent('admin_data_error', {
-                error: error.message,
-                query_type: 'data_retrieval',
-                timestamp: new Date().toISOString()
-            });
-            
-            throw new Error(error.message);
-        }
-
-        // 6. Procesar datos para analytics
-        const processedData = processAnalyticsData(data);
-        
-        // 7. Log de acceso de administrador
-        logAnalyticsEvent('admin_data_access', {
-            records_retrieved: data.length,
-            timestamp: new Date().toISOString(),
-            user_agent: request.headers['user-agent'],
-            ip: request.headers['x-forwarded-for'] || request.headers['x-real-ip']
+        // Guardar en Supabase (independiente de la respuesta)
+        console.log("💾 PROCESAR: Guardando en base de datos...");
+        const supabaseSuccess = await saveToSupabase(perfil, contactInfo, {
+            userAgent,
+            referrer,
+            utm,
+            timestamp
         });
 
-        console.log(`✅ GET-DATA: Datos obtenidos exitosamente. ${data.length} registros.`);
-
-        // 8. Respuesta exitosa con datos procesados
-        return response.status(200).json({ 
-            success: true, 
-            data: data,
-            analytics: processedData,
-            metadata: {
-                total_records: data.length,
-                last_updated: new Date().toISOString(),
-                query_version: '2.0-secure'
+        // Enviar email si tenemos clave (opcional)
+        if (process.env.RESEND_API_KEY && contactInfo?.email) {
+            try {
+                console.log("📧 PROCESAR: Enviando email...");
+                const { Resend } = await import('resend');
+                const resend = new Resend(process.env.RESEND_API_KEY);
+                
+                await resend.emails.send({
+                    from: 'Mapa Político Guerrero <noreply@mapapoliticoguerero.com>',
+                    to: [contactInfo.email],
+                    subject: `Tu Perfil Político: ${perfil.etiqueta}`,
+                    html: `
+                        <h2>¡Gracias por participar en el Mapa Político de Guerrero!</h2>
+                        <p>Hola ${contactInfo.nombre || 'Participante'},</p>
+                        <p>Tu perfil político es: <strong>${perfil.etiqueta}</strong></p>
+                        <p>${perfil.descripcion}</p>
+                        <p>Posición: ${perfil.posicion}</p>
+                        <p>Comparte tu resultado con tus amigos y conoce el perfil de tu familia.</p>
+                        <br>
+                        <p>¡Gracias por participar en esta iniciativa ciudadana!</p>
+                    `
+                });
+                console.log("✅ PROCESAR: Email enviado exitosamente");
+            } catch (emailError) {
+                console.error("⚠️ PROCESAR: Error enviando email (no crítico):", emailError.message);
             }
-        });
+        }
+
+        // Calcular tiempo de procesamiento
+        const processingTime = Date.now() - startTime;
+        console.log(`⚡ PROCESAR: Completado en ${processingTime}ms`);
+
+        // Responder siempre con éxito
+        const result = {
+            success: true,
+            perfil: {
+                etiqueta: perfil.etiqueta,
+                descripcion: perfil.descripcion,
+                posicion: perfil.posicion,
+                promedio_x: perfil.promedio_x,
+                promedio_y: perfil.promedio_y,
+                temas: perfil.temas,
+                municipio: perfil.municipio,
+                fecha: perfil.fecha,
+                nombre: contactInfo?.nombre || ''
+            },
+            analytics: {
+                processed_at: new Date().toISOString(),
+                processing_time_ms: processingTime,
+                supabase_saved: supabaseSuccess,
+                answers_count: userAnswers.length
+            }
+        };
+
+        console.log("🎉 PROCESAR: Enviando respuesta exitosa al frontend");
+        return response.status(200).json(result);
 
     } catch (error) {
-        console.error('💥 GET-DATA: ERROR:', error.message);
-        
-        // Log de error
-        logAnalyticsEvent('admin_error', {
-            error: error.message,
-            stack: error.stack,
-            timestamp: new Date().toISOString()
-        });
+        const processingTime = Date.now() - startTime;
+        console.error("💥 PROCESAR: ERROR CRÍTICO después de", processingTime, "ms");
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
         
         return response.status(500).json({ 
             success: false, 
-            message: error.message || 'Error interno del servidor.',
+            message: 'Error procesando tu solicitud. Por favor intenta nuevamente.',
+            error: error.message,
             timestamp: new Date().toISOString()
         });
     }
-}
-
-// === FUNCIONES DE AUTENTICACIÓN ===
-async function verifyPassword(password, passwordHash) {
-    // En producción, usar bcrypt o similar
-    // Por ahora, validación simple (REEMPLAZAR EN PRODUCCIÓN)
-    const crypto = require('crypto');
-    const providedHash = crypto.createHash('sha256').update(password).digest('hex');
-    
-    // Temporal: usar hash de 'guerrero2025' = 'b2f0a3b1e2c8d9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6'
-    // CAMBIAR ESTO EN PRODUCCIÓN
-    return providedHash === 'b2f0a3b1e2c8d9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6';
-}
-
-async function verifyJWTToken(token) {
-    // Implementar verificación JWT cuando esté configurado
-    // Por ahora, retornar false
-    return false;
-}
-
-// === FUNCIONES DE ANÁLISIS ===
-function processAnalyticsData(data) {
-    if (!data || data.length === 0) {
-        return {
-            total_participants: 0,
-            top_municipality: 'N/A',
-            top_profile: 'N/A',
-            participation_by_municipality: {},
-            profile_distribution: {},
-            daily_participation: []
-        };
-    }
-
-    // Análisis de municipios
-    const municipalities = data.map(r => r.municipio).filter(m => m && m !== 'Prefiero no decir');
-    const municipalityCounts = municipalities.reduce((acc, m) => {
-        acc[m] = (acc[m] || 0) + 1;
-        return acc;
-    }, {});
-    const topMunicipality = Object.entries(municipalityCounts).reduce((a, b) => a[1] > b[1] ? a : b)[0];
-
-    // Análisis de perfiles
-    const profiles = data.map(r => r.perfil_calculado?.etiqueta).filter(p => p);
-    const profileCounts = profiles.reduce((acc, p) => {
-        acc[p] = (acc[p] || 0) + 1;
-        return acc;
-    }, {});
-    const topProfile = Object.entries(profileCounts).reduce((a, b) => a[1] > b[1] ? a : b)[0];
-
-    // Participación por día
-    const dailyData = data.reduce((acc, record) => {
-        const date = new Date(record.created_at).toDateString();
-        acc[date] = (acc[date] || 0) + 1;
-        return acc;
-    }, {});
-
-    return {
-        total_participants: data.length,
-        top_municipality: topMunicipality || 'N/A',
-        top_profile: topProfile || 'N/A',
-        participation_by_municipality: municipalityCounts,
-        profile_distribution: profileCounts,
-        daily_participation: Object.entries(dailyData).map(([date, count]) => ({
-            date,
-            count
-        })),
-        growth_rate: calculateGrowthRate(dailyData),
-        engagement_metrics: calculateEngagementMetrics(data)
-    };
-}
-
-function calculateGrowthRate(dailyData) {
-    const dates = Object.keys(dailyData).sort();
-    if (dates.length < 2) return 0;
-    
-    const recent = dailyData[dates[dates.length - 1]] || 0;
-    const previous = dailyData[dates[dates.length - 2]] || 0;
-    
-    if (previous === 0) return recent > 0 ? 100 : 0;
-    return ((recent - previous) / previous) * 100;
-}
-
-function calculateEngagementMetrics(data) {
-    const totalEmails = data.filter(r => r.contacto?.email).length;
-    const emailRate = data.length > 0 ? (totalEmails / data.length) * 100 : 0;
-    
-    return {
-        email_capture_rate: Math.round(emailRate * 100) / 100,
-        anonymous_participations: data.length - totalEmails,
-        contact_provided_rate: Math.round(emailRate)
-    };
-}
-
-// === FUNCIONES DE LOGGING ===
-function logAnalyticsEvent(event, data) {
-    console.log(`📊 ADMIN: ${event}`, {
-        ...data,
-        timestamp: new Date().toISOString()
-    });
-    
-    // Aquí puedes integrar con servicios de logging como:
-    // - Sentry
-    // - LogRocket  
-    // - DataDog
-    // - CloudWatch
-}
-
-// === HEADERS DE SEGURIDAD ===
-export function setSecurityHeaders(res) {
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('X-XSS-Protection', '1; mode=block');
-    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    res.setHeader('Content-Security-Policy', "default-src 'self'");
 }
