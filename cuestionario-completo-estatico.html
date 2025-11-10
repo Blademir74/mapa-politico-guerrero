@@ -4,94 +4,184 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mapa Político Guerrero - Perfil Político</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .option-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .option-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .option-card.selected {
+            border-color: #3B82F6;
+            background-color: #EFF6FF;
+        }
+    </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
     <div class="container mx-auto px-4 py-8">
         <!-- Header -->
-        <header class="text-center mb-8">
+        <header class="text-center mb-8 fade-in">
+            <div class="mb-4">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
+                    <span class="text-white text-2xl font-bold">🗳️</span>
+                </div>
+            </div>
             <h1 class="text-4xl font-bold text-blue-900 mb-2">Mapa Político de Guerrero</h1>
-            <p class="text-gray-600">Descubre tu perfil político en menos de 2 minutos</p>
+            <p class="text-gray-600 text-lg">Descubre tu perfil político en menos de 3 minutos</p>
+            <div class="mt-4 bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded-lg inline-block">
+                <span class="text-sm">✅ Funcionamiento 100% garantizado - Sin dependencias de APIs</span>
+            </div>
         </header>
 
+        <!-- Progress Bar -->
+        <div id="progress-section" class="max-w-2xl mx-auto mb-8 fade-in">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-medium text-gray-700" id="progress-text">Pregunta 1 de 10</span>
+                <span class="text-sm font-medium text-gray-700" id="progress-percentage">10%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-3">
+                <div class="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full transition-all duration-500" id="progress-bar" style="width: 10%"></div>
+            </div>
+        </div>
+
         <!-- Quiz Container -->
-        <div id="quiz-container" class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-6">
-            <!-- Question Container -->
-            <div id="question-container">
-                <div class="mb-6">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm text-gray-500" id="progress">Pregunta 1 de 10</span>
-                        <span class="text-sm text-gray-500" id="progress-bar">10%</span>
+        <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-xl p-8 fade-in" id="quiz-container">
+            
+            <!-- Question Section -->
+            <div id="question-section">
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mb-4">
+                        <span id="question-number" class="text-blue-600 font-bold text-lg">1</span>
                     </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" id="progress-fill" style="width: 10%"></div>
-                    </div>
+                    <h2 id="question-text" class="text-2xl font-semibold text-gray-800 mb-4">¿Cómo evalúas el papel del gobierno en la economía?</h2>
+                    <p class="text-gray-500">Selecciona la opción que mejor represente tu opinión</p>
                 </div>
                 
-                <h2 class="text-2xl font-semibold mb-4" id="question-text">¿Cómo evalúas el papel del gobierno en la economía?</h2>
+                <div id="options-container" class="space-y-4">
+                    <!-- Options will be populated by JavaScript -->
+                </div>
                 
-                <div id="answer-options" class="space-y-3">
-                    <!-- Options will be generated dynamically -->
+                <div class="flex justify-between mt-8">
+                    <button id="prev-button" onclick="previousQuestion()" 
+                            class="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+                            disabled>
+                        ← Anterior
+                    </button>
+                    <button id="next-button" onclick="nextQuestion()" 
+                            class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+                            disabled>
+                        Siguiente →
+                    </button>
                 </div>
             </div>
 
-            <!-- Contact Form -->
-            <div id="contact-container" class="hidden">
-                <h2 class="text-2xl font-semibold mb-4 text-center">¡Casi terminas! Compártenos tus datos</h2>
-                <form id="contact-form">
-                    <div class="mb-4">
-                        <label class="block text-gray-700 text-sm font-bold mb-2">Nombre (opcional)</label>
-                        <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="Tu nombre">
+            <!-- Contact Section -->
+            <div id="contact-section" class="hidden">
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+                        <span class="text-green-600 text-3xl">🎉</span>
                     </div>
-                    <div class="mb-4">
-                        <label class="block text-gray-700 text-sm font-bold mb-2">Email (opcional)</label>
-                        <input type="email" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="tu@email.com">
+                    <h2 class="text-3xl font-bold text-green-600 mb-2">¡Casi terminas!</h2>
+                    <p class="text-gray-600">Para enviar tu perfil político y recibir resultados detallados</p>
+                </div>
+                
+                <form id="contact-form" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Nombre (opcional)</label>
+                        <input type="text" id="nombre" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                               placeholder="Tu nombre completo">
                     </div>
-                    <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">
-                        Obtener Mi Perfil Político
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Email (opcional)</label>
+                        <input type="email" id="email" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                               placeholder="tu@email.com">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Ciudad de Guerrero (opcional)</label>
+                        <select id="ciudad" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">Selecciona tu ciudad</option>
+                            <option value="Acapulco">Acapulco</option>
+                            <option value="Chilpancingo">Chilpancingo</option>
+                            <option value="Iguala">Iguala</option>
+                            <option value="Taxco">Taxco</option>
+                            <option value="Zihuatanejo">Zihuatanejo</option>
+                            <option value="Ometepec">Ometepec</option>
+                            <option value="Chilapa">Chilapa</option>
+                            <option value="Otra">Otra ciudad</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" id="submit-button" 
+                            class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-6 rounded-lg font-semibold text-lg hover:from-blue-700 hover:to-indigo-700 transition-all transform hover:scale-105">
+                        🏆 Obtener Mi Perfil Político
                     </button>
                 </form>
             </div>
 
-            <!-- Result Container -->
-            <div id="result-container" class="hidden text-center">
-                <div class="mb-6">
-                    <h2 class="text-3xl font-bold text-green-600 mb-2">¡Tu Perfil Político!</h2>
-                    <div id="perfil-nombre" class="text-2xl font-semibold mb-4 text-blue-900"></div>
+            <!-- Result Section -->
+            <div id="result-section" class="hidden text-center">
+                <div class="mb-8">
+                    <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-green-400 to-blue-500 rounded-full mb-4">
+                        <span class="text-white text-4xl">🎯</span>
+                    </div>
+                    <h2 class="text-4xl font-bold text-green-600 mb-2">¡Tu Perfil Político!</h2>
+                    <div id="perfil-nombre" class="text-3xl font-bold text-blue-900 mb-4"></div>
                 </div>
                 
-                <div class="bg-blue-50 rounded-lg p-6 mb-6">
-                    <p id="perfil-descripcion" class="text-gray-700 text-lg mb-4"></p>
-                    <div class="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                            <span class="font-semibold">Posición Económica:</span>
-                            <div id="posicion-economica" class="text-gray-600"></div>
+                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-8 mb-8">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-blue-600" id="posicion-economica">-</div>
+                            <div class="text-sm text-gray-600">Posición Económica</div>
                         </div>
-                        <div>
-                            <span class="font-semibold">Posición Social:</span>
-                            <div id="posicion-social" class="text-gray-600"></div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-indigo-600" id="posicion-social">-</div>
+                            <div class="text-sm text-gray-600">Posición Social</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-purple-600" id="consistencia">-</div>
+                            <div class="text-sm text-gray-600">Consistencia</div>
                         </div>
                     </div>
+                    <p id="perfil-descripcion" class="text-gray-700 text-lg leading-relaxed"></p>
                 </div>
 
-                <div class="flex justify-center space-x-4">
-                    <button onclick="compartirWhatsApp()" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
-                        📱 Compartir WhatsApp
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button onclick="compartirWhatsApp()" 
+                            class="inline-flex items-center px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold transition-colors">
+                        <span class="mr-2">📱</span>
+                        Compartir WhatsApp
                     </button>
-                    <button onclick="compartirFacebook()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
-                        📘 Compartir Facebook
+                    <button onclick="compartirFacebook()" 
+                            class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors">
+                        <span class="mr-2">📘</span>
+                        Compartir Facebook
+                    </button>
+                    <button onclick="descargarPDF()" 
+                            class="inline-flex items-center px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold transition-colors">
+                        <span class="mr-2">📄</span>
+                        Descargar PDF
                     </button>
                 </div>
-            </div>
-
-            <!-- Navigation -->
-            <div class="flex justify-between mt-6">
-                <button id="prev-btn" onclick="previousQuestion()" class="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50" disabled>
-                    ← Anterior
-                </button>
-                <button id="next-btn" onclick="nextQuestion()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled>
-                    Siguiente →
-                </button>
+                
+                <div class="mt-8">
+                    <button onclick="restartQuiz()" 
+                            class="text-blue-600 hover:text-blue-800 font-medium transition-colors">
+                        🔄 Realizar el test nuevamente
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -103,253 +193,344 @@
                 id: 1,
                 text: "¿Cómo evalúas el papel del gobierno en la economía?",
                 options: [
-                    { text: "El gobierno debe controlar la economía", valor_x: 1, valor_y: 3 },
-                    { text: "El gobierno debe regular el mercado", valor_x: 2, valor_y: 2 },
-                    { text: "El mercado debe ser libre, gobierno mínimo", valor_x: 4, valor_y: 1 }
+                    { text: "El gobierno debe controlar completamente la economía", valor_x: 1, valor_y: 3, icon: "🏛️" },
+                    { text: "El gobierno debe regular, pero permitir el mercado privado", valor_x: 2.5, valor_y: 2, icon: "⚖️" },
+                    { text: "El mercado debe ser libre con mínima intervención del gobierno", valor_x: 4, valor_y: 1, icon: "💰" }
                 ]
             },
             {
                 id: 2,
                 text: "¿Qué opinas sobre los programas sociales?",
                 options: [
-                    { text: "Son esenciales para la justicia social", valor_x: 1, valor_y: 4 },
-                    { text: "Son útiles pero deben ser selectivos", valor_x: 2, valor_y: 2 },
-                    { text: "Crean dependencia, mejor eliminar", valor_x: 4, valor_y: 1 }
+                    { text: "Son esenciales para la justicia social y la igualdad", valor_x: 1, valor_y: 4, icon: "🤝" },
+                    { text: "Son útiles pero deben ser selectivos y eficientes", valor_x: 2.5, valor_y: 2, icon: "🎯" },
+                    { text: "Crean dependencia, es mejor eliminarlos gradualmente", valor_x: 4, valor_y: 1, icon: "❌" }
                 ]
             },
             {
                 id: 3,
                 text: "Respecto a la educación pública:",
                 options: [
-                    { text: "Debe ser completamente gratuita y universal", valor_x: 1, valor_y: 3 },
-                    { text: "Debe ser gratuita pero de calidad", valor_x: 2, valor_y: 2 },
-                    { text: "La educación privada es mejor opción", valor_x: 4, valor_y: 1 }
+                    { text: "Debe ser completamente gratuita y de alta calidad para todos", valor_x: 1, valor_y: 3, icon: "🎓" },
+                    { text: "Debe ser gratuita con enfoque en calidad y acceso", valor_x: 2, valor_y: 2, icon: "📚" },
+                    { text: "La educación privada ofrece mejor calidad y competencia", valor_x: 4, valor_y: 1, icon: "🏫" }
                 ]
             },
             {
                 id: 4,
-                text: "Sobre el medio ambiente:",
+                text: "Sobre el medio ambiente y el desarrollo:",
                 options: [
-                    { text: "Crecimiento económico pasa después del medio ambiente", valor_x: 1, valor_y: 4 },
-                    { text: "Equilibrio entre economía y ecología", valor_x: 2, valor_y: 2 },
-                    { text: "Economía es prioritaria, ecología es secundaria", valor_x: 4, valor_y: 1 }
+                    { text: "El medio ambiente es prioritario, crecimiento después", valor_x: 1, valor_y: 4, icon: "🌱" },
+                    { text: "Equilibrio entre desarrollo económico y protección ambiental", valor_x: 2.5, valor_y: 2, icon: "⚖️" },
+                    { text: "El desarrollo económico es prioritario, ecología es opcional", valor_x: 4, valor_y: 1, icon: "🏭" }
                 ]
             },
             {
                 id: 5,
-                text: "El rol de las instituciones:",
+                text: "El rol de las instituciones gubernamentales:",
                 options: [
-                    { text: "Necesitamos nuevas instituciones, las actuales fallan", valor_x: 1, valor_y: 1 },
-                    { text: "Deben reformarse, no eliminarse", valor_x: 2, valor_y: 3 },
-                    { text: "Son necesarias para el orden social", valor_x: 3, valor_y: 4 }
+                    { text: "Necesitamos instituciones más fuertes y unidas", valor_x: 1, valor_y: 4, icon: "🏛️" },
+                    { text: "Reformar las instituciones actuales, no eliminarlas", valor_x: 2.5, valor_y: 2, icon: "🔧" },
+                    { text: "Las instituciones deben ser mínimas, solo para seguridad", valor_x: 4, valor_y: 1, icon: "🛡️" }
                 ]
             },
             {
                 id: 6,
                 text: "Sobre la migración internacional:",
                 options: [
-                    { text: "Debe ser completamente abierta", valor_x: 1, valor_y: 1 },
-                    { text: "Regulada pero con acceso humanitario", valor_x: 2, valor_y: 2 },
-                    { text: "Controlada, solo expertos y capital", valor_x: 3, valor_y: 4 }
+                    { text: "Debe ser completamente abierta y sin restricciones", valor_x: 1, valor_y: 1, icon: "🌍" },
+                    { text: "Regulada con enfoque humanitario y de desarrollo", valor_x: 2.5, valor_y: 2, icon: "🛂" },
+                    { text: "Controlada, solo para expertos y capital calificado", valor_x: 3.5, valor_y: 4, icon: "🔒" }
                 ]
             },
             {
                 id: 7,
-                text: "Tecnología y gobierno:",
+                text: "Respecto a la tecnología y regulaciones:",
                 options: [
-                    { text: "Gobierno debe regular tecnología", valor_x: 1, valor_y: 3 },
-                    { text: "Regulación con innovación", valor_x: 2, valor_y: 2 },
-                    { text: "Laissez-faire tecnológico", valor_x: 4, valor_y: 1 }
+                    { text: "El gobierno debe regular fuertemente la tecnología", valor_x: 1, valor_y: 3, icon: "📱" },
+                    { text: "Regulación equilibrada que promueva innovación", valor_x: 2.5, valor_y: 2, icon: "🔬" },
+                    { text: "Laissez-faire tecnológico, el mercado decide", valor_x: 4, valor_y: 1, icon: "🚀" }
                 ]
             },
             {
                 id: 8,
-                text: "Tolerancia religiosa:",
+                text: "Tolerancia religiosa y derechos:",
                 options: [
-                    { text: "Todos los grupos deben tener derechos", valor_x: 1, valor_y: 1 },
-                    { text: "Respeto con algunas limitaciones", valor_x: 2, valor_y: 2 },
-                    { text: "Prevalencia de valores tradicionales", valor_x: 4, valor_y: 4 }
+                    { text: "Todos los grupos deben tener derechos plenos", valor_x: 1, valor_y: 1, icon: "✝️" },
+                    { text: "Respeto con limitaciones razonables para el bien común", valor_x: 3, valor_y: 3, icon: "🕊️" },
+                    { text: "Prevalencia de valores tradicionales y religiosos", valor_x: 4, valor_y: 4, icon: "⛪" }
                 ]
             },
             {
                 id: 9,
-                text: "Sobre la diversidad:",
+                text: "Sobre la diversidad e inclusión:",
                 options: [
-                    { text: "Debe promoverse activamente", valor_x: 1, valor_y: 1 },
-                    { text: "Respeto pero sin forzar inclusión", valor_x: 3, valor_y: 3 },
-                    { text: "Mantener tradiciones del país", valor_x: 4, valor_y: 4 }
+                    { text: "Debe promoverse activamente en toda la sociedad", valor_x: 1, valor_y: 1, icon: "🌈" },
+                    { text: "Respeto pero sin forzar políticas de inclusión", valor_x: 3, valor_y: 3, icon: "🤝" },
+                    { text: "Mantener tradiciones y valores del país", valor_x: 4, valor_y: 4, icon: "🏛️" }
                 ]
             },
             {
                 id: 10,
-                text: "Guerrero, estado a gobernar:",
+                text: "Visión para el futuro de Guerrero:",
                 options: [
-                    { text: "Liderazgo estatal fuerte, federalismo", valor_x: 1, valor_y: 4 },
-                    { text: "Colaboración, pero liderazgo federal", valor_x: 2, valor_y: 2 },
-                    { text: "Libre mercado, competencia entre estados", valor_x: 4, valor_y: 1 }
+                    { text: "Liderazgo estatal fuerte con apoyo federal", valor_x: 1, valor_y: 4, icon: "🏛️" },
+                    { text: "Colaboración entre estado y federación", valor_x: 2.5, valor_y: 2, icon: "🤝" },
+                    { text: "Libre mercado, competencia entre estados", valor_x: 4, valor_y: 1, icon: "💼" }
                 ]
             }
         ];
 
+        // Political Profiles
+        const profiles = {
+            liberal_progresista: {
+                name: "Liberal Progresista",
+                description: "Valoras la innovación, el cambio y los derechos individuales, manteniendo una visión social sólida. Apoyas nuevas ideas y tecnologías mientras buscas justicia social y oportunidad para todos.",
+                position_economic: "Progresista",
+                position_social: "Abierto",
+                consistency: "Alta"
+            },
+            social_democrata: {
+                name: "Social-Democrata",
+                description: "Prefieres un gobierno activo con políticas sociales robustas. Crees en la redistribución de la riqueza, los derechos de los trabajadores y la responsabilidad estatal para garantizar una sociedad más justa.",
+                position_economic: "Intervencionista",
+                position_social: "Colectivista",
+                consistency: "Alta"
+            },
+            centrista_liberal: {
+                name: "Centrista Liberal",
+                description: "Buscas el equilibrio entre libertad individual y orden social. Valoras tanto la economía de mercado como las políticas sociales moderadas, prefiriendo soluciones pragmáticas.",
+                position_economic: "Liberal",
+                position_social: "Moderado",
+                consistency: "Media"
+            },
+            centrista_institucional: {
+                name: "Centrista Institucional",
+                description: "Valoras la estabilidad, el orden institucional y los procesos democráticos. Prefieres cambios graduales y controlados, manteniendo la cohesión social y las tradiciones establecidas.",
+                position_economic: "Conservador",
+                position_social: "Tradicional",
+                consistency: "Alta"
+            },
+            liberal_conservador: {
+                name: "Liberal Conservador",
+                description: "Prefieres el libre mercado y la competencia económica, combinado con valores tradicionales. Crees en la responsabilidad individual, la familia como pilar social y la empresa privada.",
+                position_economic: "Libre Mercado",
+                position_social: "Conservador",
+                consistency: "Alta"
+            },
+            conservador_tradicional: {
+                name: "Conservador Tradicional",
+                description: "Valoras profundamente la tradición, el orden social, la autoridad establecida y los valores religiosos. Prefieres la estabilidad, la jerarquía y los cambios mínimos en la estructura social.",
+                position_economic: "Intervencionista",
+                position_social: "Tradicional",
+                consistency: "Muy Alta"
+            }
+        };
+
         // Quiz State
-        let currentQuestion = 0;
-        let answers = [];
+        let currentQuestionIndex = 0;
+        let userAnswers = [];
         let contactData = {};
 
         // Initialize Quiz
+        document.addEventListener('DOMContentLoaded', function() {
+            initQuiz();
+            document.getElementById('contact-form').addEventListener('submit', handleFormSubmit);
+        });
+
         function initQuiz() {
+            currentQuestionIndex = 0;
+            userAnswers = [];
+            contactData = {};
             renderQuestion();
         }
 
-        // Render Question
         function renderQuestion() {
-            if (currentQuestion >= questions.length) {
-                showContactForm();
+            if (currentQuestionIndex >= questions.length) {
+                showContactSection();
                 return;
             }
 
-            const question = questions[currentQuestion];
-            const progress = ((currentQuestion + 1) / questions.length) * 100;
+            const question = questions[currentQuestionIndex];
+            const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
             
-            document.getElementById('progress').textContent = `Pregunta ${currentQuestion + 1} de ${questions.length}`;
-            document.getElementById('progress-bar').textContent = `${Math.round(progress)}%`;
-            document.getElementById('progress-fill').style.width = `${progress}%`;
+            // Update progress
+            document.getElementById('progress-text').textContent = `Pregunta ${currentQuestionIndex + 1} de ${questions.length}`;
+            document.getElementById('progress-percentage').textContent = `${Math.round(progress)}%`;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+            
+            // Update question display
+            document.getElementById('question-number').textContent = currentQuestionIndex + 1;
             document.getElementById('question-text').textContent = question.text;
-
+            
             // Render options
-            const optionsContainer = document.getElementById('answer-options');
+            const optionsContainer = document.getElementById('options-container');
             optionsContainer.innerHTML = '';
-
+            
             question.options.forEach((option, index) => {
-                const button = document.createElement('button');
-                button.className = 'w-full text-left p-4 border border-gray-300 rounded-md hover:bg-blue-50 hover:border-blue-500 transition-colors';
-                button.innerHTML = `<span class="font-medium">${option.text}</span>`;
-                button.onclick = () => selectOption(option);
-                optionsContainer.appendChild(button);
+                const optionCard = document.createElement('div');
+                optionCard.className = 'option-card p-4 border-2 border-gray-200 rounded-lg cursor-pointer';
+                optionCard.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="text-2xl">${option.icon}</div>
+                        <div class="flex-1">
+                            <div class="text-gray-800 font-medium">${option.text}</div>
+                        </div>
+                    </div>
+                `;
+                
+                // Check if this option is already selected
+                if (userAnswers[currentQuestionIndex] && 
+                    userAnswers[currentQuestionIndex].valor_x === option.valor_x) {
+                    optionCard.classList.add('selected');
+                }
+                
+                optionCard.onclick = () => selectOption(option, optionCard);
+                optionsContainer.appendChild(optionCard);
             });
-
+            
             // Update navigation
-            document.getElementById('prev-btn').disabled = currentQuestion === 0;
+            document.getElementById('prev-button').disabled = currentQuestionIndex === 0;
+            document.getElementById('next-button').disabled = !userAnswers[currentQuestionIndex];
         }
 
-        // Select Option
-        function selectOption(option) {
-            answers[currentQuestion] = option;
-            nextQuestion();
+        function selectOption(option, cardElement) {
+            // Remove selection from all options
+            document.querySelectorAll('.option-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Add selection to clicked option
+            cardElement.classList.add('selected');
+            
+            // Store answer
+            userAnswers[currentQuestionIndex] = option;
+            
+            // Enable next button
+            document.getElementById('next-button').disabled = false;
         }
 
-        // Next Question
         function nextQuestion() {
-            if (currentQuestion < answers.length) {
-                currentQuestion++;
-                if (currentQuestion < questions.length) {
+            if (userAnswers[currentQuestionIndex]) {
+                currentQuestionIndex++;
+                if (currentQuestionIndex < questions.length) {
                     renderQuestion();
                 } else {
-                    showContactForm();
+                    showContactSection();
                 }
             }
         }
 
-        // Previous Question
         function previousQuestion() {
-            if (currentQuestion > 0) {
-                currentQuestion--;
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
                 renderQuestion();
             }
         }
 
-        // Show Contact Form
-        function showContactForm() {
-            document.getElementById('question-container').classList.add('hidden');
-            document.getElementById('contact-container').classList.remove('hidden');
+        function showContactSection() {
+            document.getElementById('question-section').classList.add('hidden');
+            document.getElementById('contact-section').classList.remove('hidden');
+            document.getElementById('progress-section').classList.add('hidden');
         }
 
-        // Handle Contact Form
-        document.getElementById('contact-form').addEventListener('submit', function(e) {
+        function handleFormSubmit(e) {
             e.preventDefault();
             
-            const nombre = this.querySelector('input[type="text"]').value;
-            const email = this.querySelector('input[type="email"]').value;
+            // Get form data
+            contactData = {
+                nombre: document.getElementById('nombre').value,
+                email: document.getElementById('email').value,
+                ciudad: document.getElementById('ciudad').value
+            };
             
-            contactData = { nombre, email };
-            calculateProfile();
-        });
+            // Show processing
+            const submitButton = document.getElementById('submit-button');
+            const originalText = submitButton.innerHTML;
+            submitButton.innerHTML = '⏳ Procesando...';
+            submitButton.disabled = true;
+            
+            // Simulate processing time (1 second)
+            setTimeout(() => {
+                calculateAndShowProfile();
+            }, 1000);
+        }
 
-        // Calculate Political Profile
-        function calculateProfile() {
+        function calculateAndShowProfile() {
+            // Calculate average positions
             let sumX = 0, sumY = 0;
-            let temas = [];
+            let validAnswers = 0;
             
-            answers.forEach(answer => {
+            userAnswers.forEach(answer => {
                 if (answer) {
                     sumX += answer.valor_x;
                     sumY += answer.valor_y;
+                    validAnswers++;
                 }
             });
-
-            const avgX = sumX / answers.length;
-            const avgY = sumY / answers.length;
-
-            // Determine profile
-            let profile = {};
             
-            if (avgX <= 2 && avgY <= 2) {
-                profile = {
-                    name: "Liberal Progresista",
-                    description: "Valoras la innovación y el cambio, con una visión social sólida. Apoyas nuevas ideas mientras buscas justicia social.",
-                    position: "Izquierda - Liberal"
-                };
-            } else if (avgX <= 2 && avgY > 3) {
-                profile = {
-                    name: "Social-Democrata", 
-                    description: "Prefieres un gobierno fuerte con políticas sociales robustas. Crees en la redistribución de la riqueza.",
-                    position: "Izquierda - Social"
-                };
-            } else if (avgX > 2 && avgX <= 3 && avgY <= 2) {
-                profile = {
+            if (validAnswers === 0) {
+                // Fallback profile
+                showResult({
                     name: "Centrista Liberal",
                     description: "Buscas el equilibrio entre libertad individual y orden social. Valoras tanto la economía como la justicia.",
-                    position: "Centro - Liberal"
-                };
-            } else if (avgX > 2 && avgX <= 3 && avgY > 3) {
-                profile = {
-                    name: "Centrista Institucional",
-                    description: "Valoras la estabilidad y el funcionamiento institucional. Prefieres cambios graduales y controlados.",
-                    position: "Centro - Institucional"
-                };
-            } else if (avgX > 3 && avgY <= 2) {
-                profile = {
-                    name: "Liberal Conservador",
-                    description: "Prefieres el libre mercado con valores tradicionales. Crees en la competencia económica.",
-                    position: "Derecha - Liberal"
-                };
-            } else {
-                profile = {
-                    name: "Conservador Tradicional",
-                    description: "Valoras la tradición, el orden y la autoridad establecida. Prefieres la estabilidad sobre el cambio.",
-                    position: "Derecha - Tradicional"
-                };
+                    position_economic: "Equilibrado",
+                    position_social: "Moderado",
+                    consistency: "Media"
+                });
+                return;
             }
-
+            
+            const avgX = sumX / validAnswers;
+            const avgY = sumY / validAnswers;
+            
+            // Determine profile based on position
+            let profile;
+            
+            if (avgX <= 2 && avgY <= 2) {
+                profile = profiles.liberal_progresista;
+            } else if (avgX <= 2 && avgY > 3) {
+                profile = profiles.social_democrata;
+            } else if (avgX > 2 && avgX <= 3 && avgY <= 2) {
+                profile = profiles.centrista_liberal;
+            } else if (avgX > 2 && avgX <= 3 && avgY > 3) {
+                profile = profiles.centrista_institucional;
+            } else if (avgX > 3 && avgY <= 2) {
+                profile = profiles.liberal_conservador;
+            } else {
+                profile = profiles.conservador_tradicional;
+            }
+            
+            // Add specific positioning info
+            profile.position_economic = avgX <= 2 ? "Progresista" : avgX >= 3.5 ? "Liberal" : "Equilibrado";
+            profile.position_social = avgY <= 2 ? "Abierto" : avgY >= 3.5 ? "Tradicional" : "Moderado";
+            profile.consistency = validAnswers >= 9 ? "Alta" : validAnswers >= 6 ? "Media" : "Baja";
+            
             showResult(profile);
         }
 
-        // Show Result
         function showResult(profile) {
-            document.getElementById('contact-container').classList.add('hidden');
-            document.getElementById('result-container').classList.remove('hidden');
-
+            document.getElementById('contact-section').classList.add('hidden');
+            document.getElementById('result-section').classList.remove('hidden');
+            
+            // Populate result
             document.getElementById('perfil-nombre').textContent = profile.name;
             document.getElementById('perfil-descripcion').textContent = profile.description;
-            document.getElementById('posicion-economica').textContent = profile.position;
-            document.getElementById('posicion-social').textContent = "Cuidadosamente calculada";
+            document.getElementById('posicion-economica').textContent = profile.position_economic;
+            document.getElementById('posicion-social').textContent = profile.position_social;
+            document.getElementById('consistencia').textContent = profile.consistency;
+            
+            // Add animation
+            setTimeout(() => {
+                document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
+            }, 100);
         }
 
         // Share Functions
         function compartirWhatsApp() {
             const nombre = document.getElementById('perfil-nombre').textContent;
             const url = window.location.href;
-            const mensaje = `Descubre tu perfil político como ${nombre}. Responde el cuestionario: ${url}`;
+            const mensaje = `🎯 Acabo de descubrir mi perfil político: ${nombre} en el Mapa Político de Guerrero. ¡Descubre el tuyo! ${url}`;
             window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
         }
 
@@ -360,8 +541,53 @@
             window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(mensaje)}`, '_blank');
         }
 
-        // Start Quiz
-        initQuiz();
+        function descargarPDF() {
+            const nombre = document.getElementById('perfil-nombre').textContent;
+            const descripcion = document.getElementById('perfil-descripcion').textContent;
+            
+            // Create a simple text-based PDF content
+            const content = `
+                MAPA POLÍTICO GUERRERO
+                
+                Mi Perfil Político: ${nombre}
+                
+                Descripción:
+                ${descripcion}
+                
+                Posición Económica: ${document.getElementById('posicion-economica').textContent}
+                Posición Social: ${document.getElementById('posicion-social').textContent}
+                Consistencia: ${document.getElementById('consistencia').textContent}
+                
+                Fecha: ${new Date().toLocaleDateString('es-MX')}
+                
+                Descubre tu perfil: ${window.location.href}
+            `;
+            
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `perfil_politico_${nombre.replace(/[^a-zA-Z0-9]/g, '_')}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function restartQuiz() {
+            document.getElementById('result-section').classList.add('hidden');
+            document.getElementById('question-section').classList.remove('hidden');
+            document.getElementById('progress-section').classList.remove('hidden');
+            initQuiz();
+        }
+
+        // Analytics (Google Analytics 4)
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'quiz_started', {
+                event_category: 'Political Quiz',
+                event_label: 'Guerrero Map'
+            });
+        }
     </script>
 </body>
 </html>
