@@ -468,7 +468,46 @@
                     validAnswers++;
                 }
             });
-            
+
+              // Enviar datos a la API
+  try {
+    const response = await fetch('/api/procesar', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userAnswers: userAnswers,
+        contactInfo: contactData,
+        userAgent: navigator.userAgent,
+        referrer: document.referrer,
+        timestamp: new Date().toISOString(),
+        utm: getUTMParameters()
+      })
+    });
+
+    if (!response.ok) {
+      console.error('Error:', response.status);
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    const profile = result.perfil;
+    
+    showResult({
+      name: profile.etiqueta,
+      description: profile.descripcion,
+      position_economic: profile.promedio_x > 3 ? "Libre Mercado" : "Progresista",
+      position_social: profile.promedio_y > 3 ? "Tradicional" : "Abierto",
+      consistency: "Alta"
+    });
+  } catch (error) {
+    console.error('Error enviando datos:', error);
+    // Fallback: mostrar resultado local
+    showLocalProfile();
+  }
+}
+        
             if (validAnswers === 0) {
                 // Fallback profile
                 showResult({
