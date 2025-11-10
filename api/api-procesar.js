@@ -1,274 +1,267 @@
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
 
-// Variables de entorno CRÍTICAS
+// Variables de entorno ESENCIALES
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
-const resendApiKey = process.env.RESEND_API_KEY;
-const adminPassword = process.env.ADMIN_PASSWORD; // NUEVA: Contraseña de admin desde variables de entorno
 
-// === VERIFICACIÓN DE SEGURIDAD ===
-if (!supabaseUrl || !supabaseAnonKey || !resendApiKey) {
-    console.error("ERROR CRÍTICO: Faltan variables de entorno. Revisa la configuración en Vercel.");
-    throw new Error("Configuración del servidor incompleta");
+// Verificar variables críticas
+if (!supabaseUrl || !supabaseAnonKey) {
+    console.error("❌ ERROR: Faltan variables de entorno de Supabase");
+    console.log("SUPABASE_URL:", supabaseUrl ? "✅ Configurada" : "❌ Falta");
+    console.log("SUPABASE_ANON_KEY:", supabaseAnonKey ? "✅ Configurada" : "❌ Falta");
+    throw new Error("Configuración de Supabase incompleta");
 }
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
-const resend = new Resend(resendApiKey);
-
-// === FUNCIONES DE TRACKING AVANZADO ===
-function logAnalyticsEvent(event, data) {
-    console.log(`📊 ANALYTICS: ${event}`, data);
-    
-    // Aquí puedes integrar con Google Analytics, Mixpanel, etc.
-    // Por ahora, solo loggamos
-    return {
-        timestamp: new Date().toISOString(),
-        event: event,
-        data: data
-    };
-}
 
 function calculatePoliticalProfile(respuestas) {
-    let suma_x = 0, suma_y = 0, contador = 0;
-    let temas = [], liderazgo = "No definido", valor_gobierno = "No definido";
+    console.log("🧠 Calculando perfil con", respuestas.length, "respuestas");
+    
+    let suma_x = 0, suma_y = 0;
+    let temas = [];
+    let municipio_info = "No especificado";
     
     respuestas.forEach(r => {
-        if (r.respuesta && r.respuesta.valor_x !== undefined) {
-            suma_x += r.respuesta.valor_x;
-            suma_y += r.respuesta.valor_y;
-            contador++;
-            if (r.respuesta.tema) temas.push(r.respuesta.tema);
-            if (r.respuesta.liderazgo) liderazgo = r.respuesta.liderazgo;
-            if (r.respuesta.valor) valor_gobierno = r.respuesta.valor;
-        } else if (r.seleccionados) {
-            r.seleccionados.forEach(opcion => {
-                temas.push(opcion.tema);
-                suma_y += opcion.boost_y;
-            });
-        } else if (r.pregunta_id === 2 && r.valor) {
-            suma_y += (r.valor * 7);
-            contador++;
-        } else if (r.pregunta_id === 6 && r.valor) {
-            suma_x += (r.valor * 8);
-            contador++;
+        try {
+            // Procesar respuesta normal
+            if (r.respuesta) {
+                if (r.respuesta.valor_x !== undefined) suma_x += r.respuesta.valor_x;
+                if (r.respuesta.valor_y !== undefined) suma_y += r.respuesta.valor_y;
+                if (r.respuesta.tema) temas.push(r.respuesta.tema);
+                if (r.respuesta.municipio) municipio_info = r.respuesta.municipio;
+            }
+            
+            // Procesar selecciones múltiples
+            if (r.seleccionados && Array.isArray(r.seleccionados)) {
+                r.seleccionados.forEach(opcion => {
+                    if (opcion.tema) temas.push(opcion.tema);
+                    if (opcion.boost_y) suma_y += opcion.boost_y;
+                });
+            }
+            
+            // Procesar valor específico
+            if (r.pregunta_id === 2 && r.valor) {
+                suma_y += (r.valor * 7);
+            }
+            
+            // Procesar municipio por geolocalización
+            if (r.pregunta_id === 11 && r.municipio) {
+                municipio_info = r.municipio;
+            }
+        } catch (error) {
+            console.error("Error procesando respuesta:", r, error);
         }
     });
-
-    if (contador === 0) contador = 1;
-    const posicion_x = Math.max(0, Math.min(100, (suma_x / contador) || 50));
-    const posicion_y = Math.max(0, Math.min(100, (suma_y / contador) || 50));
-    const etiqueta = determinarEtiqueta(posicion_x, posicion_y);
-    const tema_principal = temas.length > 0 
-        ? Object.entries(temas.reduce((acc, v) => (acc[v] = (acc[v] || 0) + 1, acc), {}))
-                .reduce((a, b) => a[1] > b[1] ? a : b)[0] 
-        : "Equilibrado";
-    const municipio = respuestas.find(r => r.pregunta_id === 11)?.valor || "No especificado";
-
+    
+    // Calcular promedio
+    const promedio_x = respuestas.length > 0 ? suma_x / respuestas.length : 0;
+    const promedio_y = respuestas.length > 0 ? suma_y / respuestas.length : 0;
+    
+    console.log(`📊 Perfil calculado - X: ${promedio_x.toFixed(2)}, Y: ${promedio_y.toFixed(2)}`);
+    
+    // Determinar posición política
+    let posicion = "";
+    let etiqueta = "";
+    let descripcion = "";
+    
+    if (promedio_x <= 2 && promedio_y <= 2) {
+        posicion = "Izquierda-Contralismo";
+        etiqueta = "Liberal Progresista";
+        descripcion = "Valoras la innovación y el cambio, con una visión social sólida.";
+    } else if (promedio_x <= 2 && promedio_y > 2) {
+        posicion = "Izquierda-Centralismo";
+        etiqueta = "Social-Democrata";
+        descripcion = "Prefieres un gobierno fuerte con políticas sociales robustas.";
+    } else if (promedio_x > 2 && promedio_x <= 3 && promedio_y <= 2) {
+        posicion = "Centro-Contralismo";
+        etiqueta = "Centrista Liberal";
+        descripcion = "Buscas el equilibrio entre libertad individual y orden social.";
+    } else if (promedio_x > 2 && promedio_x <= 3 && promedio_y > 2) {
+        posicion = "Centro-Centralismo";
+        etiqueta = "Centrista Institucional";
+        descripcion = "Valoras la estabilidad y el funcionamiento institucional.";
+    } else if (promedio_x > 3 && promedio_y <= 2) {
+        posicion = "Derecha-Contralismo";
+        etiqueta = "Liberal Conservador";
+        descripcion = "Prefieres el libre mercado con valores tradicionales.";
+    } else {
+        posicion = "Derecha-Centralismo";
+        etiqueta = "Conservador Tradicional";
+        descripcion = "Valoras la tradición, el orden y la autoridad establecida.";
+    }
+    
+    // Eliminar duplicados de temas
+    temas = [...new Set(temas)];
+    
     return {
-        posicion_x: Math.round(posicion_x),
-        posicion_y: Math.round(posicion_y),
-        etiqueta,
-        tema_principal,
-        liderazgo_preferido: liderazgo,
-        valor_gobierno,
-        municipio,
-        calculoTimestamp: new Date().toISOString()
+        etiqueta: etiqueta,
+        descripcion: descripcion,
+        posicion: posicion,
+        promedio_x: parseFloat(promedio_x.toFixed(2)),
+        promedio_y: parseFloat(promedio_y.toFixed(2)),
+        temas: temas,
+        municipio: municipio_info,
+        fecha: new Date().toISOString()
     };
 }
 
-function determinarEtiqueta(x, y) {
-    if (x < 40) {
-        if (y < 40) return "Conservador Liberal";
-        if (y < 70) return "Conservador Moderado";
-        return "Conservador Autoritario";
-    } else if (x < 60) {
-        if (y < 40) return "Centrista Pragmático";
-        if (y < 70) return "Centrista Equilibrado";
-        return "Centrista con Énfasis Social";
-    } else {
-        if (y < 40) return "Progresista Libertario";
-        if (y < 70) return "Progresista Social";
-        return "Progresista Radical";
+async function saveToSupabase(perfil, contactInfo, analytics) {
+    try {
+        console.log("💾 Guardando en Supabase...");
+        
+        const dataToSave = {
+            perfil_etiqueta: perfil.etiqueta,
+            perfil_descripcion: perfil.descripcion,
+            perfil_posicion: perfil.posicion,
+            promedio_x: perfil.promedio_x,
+            promedio_y: perfil.promedio_y,
+            temas_interes: JSON.stringify(perfil.temas),
+            municipio: perfil.municipio,
+            email: contactInfo?.email || null,
+            nombre: contactInfo?.nombre || null,
+            telefono: contactInfo?.telefono || null,
+            ip_address: analytics?.ip || null,
+            user_agent: analytics?.userAgent || null,
+            referrer: analytics?.referrer || null,
+            utm_source: analytics?.utm?.source || null,
+            utm_medium: analytics?.utm?.medium || null,
+            utm_campaign: analytics?.utm?.campaign || null,
+            created_at: new Date().toISOString()
+        };
+        
+        const { data, error } = await supabase
+            .from('participacion_mapa_politico')
+            .insert([dataToSave])
+            .select();
+            
+        if (error) {
+            console.error("❌ Error en Supabase:", error);
+            return false;
+        }
+        
+        console.log("✅ Guardado en Supabase exitosamente");
+        return true;
+        
+    } catch (error) {
+        console.error("❌ Error guardando en Supabase:", error);
+        return false;
     }
 }
 
-// === FUNCIÓN PRINCIPAL ===
 export default async function handler(request, response) {
-    console.log("🚀 PROCESAR: Iniciando función optimizada...");
-
+    const startTime = Date.now();
+    
     try {
+        console.log("🚀 PROCESAR: Nueva solicitud iniciada -", new Date().toISOString());
+        
+        // Solo aceptar POST
         if (request.method !== 'POST') {
-            console.log("❌ PROCESAR: Método no permitido");
+            console.log("❌ PROCESAR: Método no permitido:", request.method);
             return response.status(405).json({ 
                 success: false, 
-                message: 'Método no permitido' 
+                message: 'Método no permitido. Use POST.' 
             });
         }
 
-        console.log("📥 PROCESAR: Request recibido...");
+        // Extraer datos del request
         const { userAnswers, contactInfo, userAgent, timestamp, municipality, referrer, utm } = request.body;
+        
+        console.log("📥 PROCESAR: Datos recibidos");
+        console.log("  - Respuestas:", userAnswers?.length || 0);
+        console.log("  - Contacto:", contactInfo?.email ? "Sí" : "No");
+        console.log("  - Municipio:", municipality);
+        console.log("  - UTM:", utm);
 
-        if (!userAnswers) {
-            console.log("❌ PROCESAR: No se encontraron respuestas");
+        // Validación básica
+        if (!userAnswers || !Array.isArray(userAnswers) || userAnswers.length === 0) {
+            console.log("❌ PROCESAR: No se recibieron respuestas válidas");
             return response.status(400).json({ 
                 success: false, 
-                message: 'No se encontraron respuestas' 
+                message: 'No se recibieron respuestas válidas del cuestionario.' 
             });
         }
 
-        // === TRACKING AVANZADO ===
-        const analyticsData = logAnalyticsEvent('survey_submission', {
-            questions_count: userAnswers.length,
-            has_contact: !!contactInfo?.email,
-            municipality: municipality,
-            user_agent: userAgent,
-            referrer: referrer,
-            utm: utm,
-            submission_timestamp: timestamp
-        });
-
-        console.log("🧠 PROCESAR: Calculando perfil...");
+        // Calcular perfil
+        console.log("🧠 PROCESAR: Calculando perfil político...");
         const perfil = calculatePoliticalProfile(userAnswers);
-        console.log(`✅ PROCESAR: Perfil calculado: ${perfil.etiqueta}`);
+        console.log("✅ PROCESAR: Perfil calculado:", perfil.etiqueta);
 
-        // === TRACKING DE PERFIL GENERADO ===
-        logAnalyticsEvent('profile_generated', {
-            ...analyticsData,
-            perfil: perfil
+        // Guardar en Supabase (independiente de la respuesta)
+        console.log("💾 PROCESAR: Guardando en base de datos...");
+        const supabaseSuccess = await saveToSupabase(perfil, contactInfo, {
+            userAgent,
+            referrer,
+            utm,
+            timestamp
         });
 
-        // === GUARDAR EN SUPABASE CON DATOS ENRIQUECIDOS ===
-        console.log("💾 PROCESAR: Guardando en Supabase...");
-        
-        // Preparar datos enriquecidos para análisis
-        const participationData = {
-            respuestas: userAnswers, 
-            perfil_calculado: perfil,
-            municipio: municipio || perfil.municipio,
-            contacto: contactInfo,
-            metadata: {
-                user_agent: userAgent,
-                submission_timestamp: timestamp,
-                referrer: referrer,
-                utm: utm,
-                ip_address: request.headers['x-forwarded-for'] || request.headers['x-real-ip'],
-                calculated_at: new Date().toISOString()
-            }
-        };
-
-        const { data, error } = await supabase
-            .from('participaciones')
-            .insert([participationData]);
-        
-        if (error) {
-            console.error("❌ PROCESAR: Error de Supabase:", error.message);
-            
-            // TRACKING DE ERROR
-            logAnalyticsEvent('database_error', {
-                error: error.message,
-                perfil: perfil
-            });
-            
-            throw new Error(`Error al guardar en la base de datos: ${error.message}`);
-        }
-        
-        console.log("✅ PROCESAR: Guardado en Supabase exitoso.");
-
-        // === ENVÍO DE EMAIL CON TRACKING ===
-        if (contactInfo && contactInfo.email) {
-            console.log("📧 PROCESAR: Enviando email...");
-            
+        // Enviar email si tenemos clave (opcional)
+        if (process.env.RESEND_API_KEY && contactInfo?.email) {
             try {
+                console.log("📧 PROCESAR: Enviando email...");
+                const { Resend } = await import('resend');
+                const resend = new Resend(process.env.RESEND_API_KEY);
+                
                 await resend.emails.send({
-                    from: 'Mapa Político de Guerrero <noreply@miperfilguerrero.com>',
-                    to: contactInfo.email,
-                    subject: `Tu Perfil Político de Guerrero: ${perfil.etiqueta}`,
+                    from: 'Mapa Político Guerrero <noreply@mapapoliticoguerero.com>',
+                    to: [contactInfo.email],
+                    subject: `Tu Perfil Político: ${perfil.etiqueta}`,
                     html: `
-                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                            <h1 style="color: #1f2937; text-align: center;">¡Hola ${contactInfo.nombre || ''}! 🗺️</h1>
-                            
-                            <div style="background: linear-gradient(135deg, #10B981, #3B82F6); padding: 20px; border-radius: 10px; text-align: center; margin: 20px 0;">
-                                <h2 style="color: white; margin: 0;">Tu Perfil Político es:</h2>
-                                <h1 style="color: #FCD34D; margin: 10px 0 0 0;">${perfil.etiqueta}</h1>
-                            </div>
-                            
-                            <div style="background: #F9FAFB; padding: 20px; border-radius: 10px; margin: 20px 0;">
-                                <h3 style="color: #1f2937;">Detalles de tu perfil:</h3>
-                                <ul style="color: #4B5563;">
-                                    <li><strong>Tema Prioritario:</strong> ${perfil.tema_principal}</li>
-                                    <li><strong>Liderazgo Preferido:</strong> ${perfil.liderazgo_preferido}</li>
-                                    <li><strong>Valor en Gobierno:</strong> ${perfil.valor_gobierno}</li>
-                                    <li><strong>Municipio:</strong> ${perfil.municipio}</li>
-                                </ul>
-                            </div>
-                            
-                            <div style="text-align: center; margin: 30px 0;">
-                                <a href="https://mapa-politico-guerrero.vercel.app" 
-                                   style="background: #FCD34D; color: #1f2937; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; display: inline-block;">
-                                    🔄 Realizar el Test Nuevamente
-                                </a>
-                            </div>
-                            
-                            <p style="color: #6B7280; font-size: 14px; text-align: center; margin-top: 30px;">
-                                Este es un ejercicio de visualización de datos y no representa una encuesta electoral oficial.
-                            </p>
-                        </div>
+                        <h2>¡Gracias por participar en el Mapa Político de Guerrero!</h2>
+                        <p>Hola ${contactInfo.nombre || 'Participante'},</p>
+                        <p>Tu perfil político es: <strong>${perfil.etiqueta}</strong></p>
+                        <p>${perfil.descripcion}</p>
+                        <p>Posición: ${perfil.posicion}</p>
+                        <p>Comparte tu resultado con tus amigos y conoce el perfil de tu familia.</p>
+                        <br>
+                        <p>¡Gracias por participar en esta iniciativa ciudadana!</p>
                     `
                 });
-                
-                console.log("✅ PROCESAR: Email enviado.");
-                
-                // TRACKING DE EMAIL
-                logAnalyticsEvent('email_sent', {
-                    email: contactInfo.email,
-                    perfil: perfil
-                });
-                
+                console.log("✅ PROCESAR: Email enviado exitosamente");
             } catch (emailError) {
-                console.error("❌ PROCESAR: Error enviando email:", emailError);
-                // No fallar el proceso por error de email
-                logAnalyticsEvent('email_error', {
-                    error: emailError.message,
-                    email: contactInfo.email
-                });
+                console.error("⚠️ PROCESAR: Error enviando email (no crítico):", emailError.message);
             }
         }
-        
-        // === TRACKING FINAL ===
-        logAnalyticsEvent('processing_completed', {
-            ...analyticsData,
-            perfil: perfil,
-            success: true
-        });
-        
-        console.log("🎉 PROCESAR: Enviando respuesta exitosa al frontend.");
-        
-        return response.status(200).json({ 
-            success: true, 
+
+        // Calcular tiempo de procesamiento
+        const processingTime = Date.now() - startTime;
+        console.log(`⚡ PROCESAR: Completado en ${processingTime}ms`);
+
+        // Responder siempre con éxito
+        const result = {
+            success: true,
             perfil: {
-                ...perfil,
+                etiqueta: perfil.etiqueta,
+                descripcion: perfil.descripcion,
+                posicion: perfil.posicion,
+                promedio_x: perfil.promedio_x,
+                promedio_y: perfil.promedio_y,
+                temas: perfil.temas,
+                municipio: perfil.municipio,
+                fecha: perfil.fecha,
                 nombre: contactInfo?.nombre || ''
             },
             analytics: {
                 processed_at: new Date().toISOString(),
-                data_enrichment: true
+                processing_time_ms: processingTime,
+                supabase_saved: supabaseSuccess,
+                answers_count: userAnswers.length
             }
-        });
+        };
+
+        console.log("🎉 PROCESAR: Enviando respuesta exitosa al frontend");
+        return response.status(200).json(result);
 
     } catch (error) {
-        console.error("💥 PROCESAR: ERROR CRÍTICO:", error.message);
-        
-        // TRACKING DE ERROR GENERAL
-        logAnalyticsEvent('processing_error', {
-            error: error.message,
-            stack: error.stack,
-            timestamp: new Date().toISOString()
-        });
+        const processingTime = Date.now() - startTime;
+        console.error("💥 PROCESAR: ERROR CRÍTICO después de", processingTime, "ms");
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
         
         return response.status(500).json({ 
             success: false, 
-            message: error.message,
+            message: 'Error procesando tu solicitud. Por favor intenta nuevamente.',
+            error: error.message,
             timestamp: new Date().toISOString()
         });
     }
