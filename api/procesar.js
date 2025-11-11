@@ -12,7 +12,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// --- ESTA FUNCIÓN ES SOLO UN RESPALDO ---
 function getMockData() {
     // Datos de ejemplo para desarrollo
     return {
@@ -49,36 +48,39 @@ export default async function handler(request, response) {
     try {
         console.log("📊 GET-DATA: Nueva solicitud -", new Date().toISOString());
         
-        // --- 1. AUTENTICACIÓN ---
-        // Solo aceptar POST (como lo pide el admin.html)
-        if (request.method !== 'POST') {
+        // Solo aceptar GET
+        if (request.method !== 'GET') {
             console.log("❌ GET-DATA: Método no permitido:", request.method);
             return response.status(405).json({ 
                 success: false, 
-                message: 'Método no permitido. Use POST.' 
+                message: 'Método no permitido. Use GET.' 
             });
         }
-        
-        // Leer la contraseña del body
-        const { password } = request.body;
-        
-        // Validar la contraseña (la misma que en admin.html)
-        if (password !== 'guerrero2025') {
-            console.log("❌ GET-DATA: Contraseña incorrecta.");
-            return response.status(403).json({ 
-                success: false, 
-                message: 'Error de autenticación: Contraseña incorrecta.'
-            });
-        }
-        
-        console.log("✅ GET-DATA: Autenticación exitosa.");
-        
-        // --- 2. LÓGICA DE DATOS ---
-        
+
+        // Obtener parámetros de query
+        const { start_date, end_date, municipio } = request.query;
+        console.log("📅 GET-DATA: Filtros solicitados");
+        console.log("  - Fecha inicio:", start_date || 'No especificada');
+        console.log("  - Fecha fin:", end_date || 'No especificada');
+        console.log("  - Municipio:", municipio || 'Todos');
+
         // Construir query base
         let query = supabase
             .from('participaciones') // <-- ¡CORREGIDO!
             .select('*');
+
+        // Aplicar filtros de fecha
+        if (start_date) {
+            query = query.gte('created_at', start_date);
+        }
+        if (end_date) {
+            query = query.lte('created_at', end_date);
+        }
+
+        // Aplicar filtro de municipio
+        if (municipio) {
+            query = query.eq('municipio', municipio);
+        }
 
         // Ejecutar query
         console.log("💾 GET-DATA: Consultando base de datos...");
@@ -128,8 +130,8 @@ export default async function handler(request, response) {
                 participacionPorMes[mes] = (participacionPorMes[mes] || 0) + 1;
 
                 // Contar perfiles
-                if (row.perfil_etiqueta) {
-                    perfilesCounts[row.perfil_etiqueta] = (perfilesCounts[row.perfil_etiqueta] || 0) + 1;
+                if (row.perfil_calculado && row.perfil_calculado.etiqueta) {
+                    perfilesCounts[row.perfil_calculado.etiqueta] = (perfilesCounts[row.perfil_calculado.etiqueta] || 0) + 1;
                 }
 
                 // Contar municipios
@@ -174,7 +176,12 @@ export default async function handler(request, response) {
             success: true,
             data: processedData,
             source: 'supabase',
-            total_records: count
+            total_records: count,
+            filters_applied: {
+                start_date: start_date || null,
+                end_date: end_date || null,
+                municipio: municipio || null
+            }
         });
 
     } catch (error) {
