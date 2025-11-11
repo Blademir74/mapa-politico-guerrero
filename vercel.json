@@ -35,5 +35,11 @@
     }
   ],
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+    "rewrites": [
+    {
+      "source": "/api/procesador",
+      "destination": "/api/procesar"
+    }
+  ]
 }
