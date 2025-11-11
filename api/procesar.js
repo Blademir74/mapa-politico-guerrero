@@ -1,5 +1,5 @@
-// API PROCESAR CORREGIDO - SIN DEPENDENCIAS EXTERNAS
-// Versión que funciona SIN variables de entorno
+// API PROCESAR CORREGIDO - MATCH CON FRONTEND
+// Versión que SÍ acepta userAnswers como el frontend envía
 
 export default async function handler(req, res) {
     // CORS headers
@@ -16,35 +16,64 @@ export default async function handler(req, res) {
     }
     
     try {
-        console.log('API procesar llamada:', req.body);
+        console.log('=== API PROCESAR LLAMADA ===');
+        console.log('Request body completo:', JSON.stringify(req.body, null, 2));
         
-        const { respuestas } = req.body;
+        // MATCH CON FRONTEND: aceptar userAnswers
+        const { userAnswers } = req.body;
         
-        if (!respuestas || !Array.isArray(respuestas)) {
+        if (!userAnswers || !Array.isArray(userAnswers)) {
+            console.log('ERROR: userAnswers no es válido');
             return res.status(400).json({ 
                 error: 'Datos inválidos',
-                message: 'Se requieren respuestas como array',
-                received: typeof respuestas
+                message: 'Se requiere userAnswers como array',
+                received_type: typeof userAnswers,
+                is_array: Array.isArray(userAnswers)
             });
         }
         
-        console.log('Procesando respuestas:', respuestas.length);
+        console.log('Procesando userAnswers:', userAnswers.length, 'elementos');
+        
+        // Extraer solo las respuestas de las preguntas (no contacto)
+        const surveyAnswers = userAnswers.filter(answer => answer.pregunta_id !== 12);
+        console.log('Survey answers filtrados:', surveyAnswers.length);
+        
+        // Convertir respuestas al formato esperado por el algoritmo
+        const respuestas = [];
+        
+        for (const answer of surveyAnswers) {
+            if (answer.respuesta) {
+                // Opción múltiple: tomar valor_x y valor_y de la respuesta
+                respuestas.push(answer.respuesta.valor_x < 50 ? 'si' : 'no');
+            } else if (answer.valor !== undefined) {
+                // Escala: convertir valor a si/no
+                respuestas.push(answer.valor > 5 ? 'si' : 'no');
+            } else if (answer.seleccionados) {
+                // Casillas múltiples: tomar la primera opción
+                respuestas.push('si');
+            } else if (answer.valor) {
+                // Desplegable: siempre sí
+                respuestas.push('si');
+            }
+        }
+        
+        console.log('Respuestas convertidas:', respuestas);
         
         // Algoritmo de perfil político
         let ejeEconomico = 0;
         let ejeSocial = 0;
         
         const mapeo = [
-            { econ: -15, social: -10 },
-            { econ: -10, social: -10 },
-            { econ: 10, social: 0 },
-            { econ: 0, social: -15 },
-            { econ: -10, social: -5 },
-            { econ: -10, social: 10 },
-            { econ: -10, social: -10 },
-            { econ: -10, social: -10 },
-            { econ: -10, social: 0 },
-            { econ: -10, social: -10 }
+            { econ: -15, social: -10 }, // Pregunta 1: Orgullo de Guerrero
+            { econ: -10, social: -10 }, // Pregunta 2: Seguridad
+            { econ: 10, social: 0 },    // Pregunta 3: Visión futuro
+            { econ: 0, social: -15 },   // Pregunta 4: Presupuesto
+            { econ: -10, social: -5 },  // Pregunta 5: Problema primero
+            { econ: -10, social: 10 },  // Pregunta 6: Amapola
+            { econ: -10, social: -10 }, // Pregunta 7: Líder
+            { econ: -10, social: -10 }, // Pregunta 8: Intervención gobierno
+            { econ: -10, social: 0 },   // Pregunta 9: Autonomía
+            { econ: -10, social: -10 }  // Pregunta 10: Buen gobierno
         ];
         
         respuestas.forEach((respuesta, index) => {
@@ -59,6 +88,7 @@ export default async function handler(req, res) {
             }
         });
         
+        // Normalizar a rangos -100 a +100
         ejeEconomico = Math.max(-100, Math.min(100, ejeEconomico));
         ejeSocial = Math.max(-100, Math.min(100, ejeSocial));
         
@@ -121,41 +151,51 @@ export default async function handler(req, res) {
             ];
         }
         
-        // Respuesta exitosa
+        // FORMATO PARA FRONTEND: usar perfil.etiqueta como espera displayResultsPage
         const resultado = {
             success: true,
-            data: {
-                perfil,
-                ejeEconomico: Math.round(ejeEconomico),
-                ejeSocial: Math.round(ejeSocial),
-                descripcion,
-                color,
-                recomendaciones,
-                timestamp: new Date().toISOString()
+            perfil: {
+                etiqueta: perfil,
+                descripcion: descripcion,
+                tema_principal: perfil,  // Simplificado
+                liderazgo_preferido: 'Variable', // Simplificado
+                valor_gobierno: perfil,  // Simplificado
+                posicion_x: Math.round((ejeEconomico + 100) / 2), // Convertir -100,100 a 0,100
+                posicion_y: Math.round((ejeSocial + 100) / 2),    // Convertir -100,100 a 0,100
+                color: color,
+                recomendaciones: recomendaciones
+            },
+            timestamp: new Date().toISOString(),
+            debug: {
+                eje_economico: ejeEconomico,
+                eje_social: ejeSocial,
+                respuestas_procesadas: respuestas.length
             }
         };
         
-        console.log('Resultado generado:', resultado);
+        console.log('Resultado generado exitosamente:', resultado.perfil.etiqueta);
         
-        // NO intentar conectar a Supabase para evitar errores
         return res.status(200).json(resultado);
         
     } catch (error) {
-        console.error('Error en API:', error);
+        console.error('ERROR EN API:', error);
         
-        // Respuesta de emergencia siempre
+        // Respuesta de emergencia
         const emergencia = {
             success: true,
-            data: {
-                perfil: 'Centrista Liberal',
-                ejeEconomico: 0,
-                ejeSocial: 0,
+            perfil: {
+                etiqueta: 'Centrista Liberal',
                 descripcion: 'Perfil moderado y equilibrado.',
+                tema_principal: 'Equilibrio',
+                liderazgo_preferido: 'Pragmático',
+                valor_gobierno: 'Moderación',
+                posicion_x: 50,
+                posicion_y: 50,
                 color: '#8B5CF6',
-                recomendaciones: ['Prefieres soluciones equilibradas', 'Te orientas hacia el pragmatismo político'],
-                timestamp: new Date().toISOString(),
-                modo_emergencia: true
-            }
+                recomendaciones: ['Prefieres soluciones equilibradas', 'Te orientas hacia el pragmatismo político']
+            },
+            timestamp: new Date().toISOString(),
+            modo_emergencia: true
         };
         
         return res.status(200).json(emergencia);
