@@ -683,108 +683,466 @@
             }
             finishSurvey();
         }
+    
+        function finishSurvey() {
+        console.log('🎯 Iniciando procesamiento para redes sociales (100% confiable)');
+    
+    // Preparar datos del cuestionario
+    const surveyData = {
+        userAnswers: userAnswers,
+        contactInfo: contactForm ? contactForm.getFormData() : {},
+        timestamp: new Date().toISOString(),
+        municipality: selectedMunicipality || 'Guerrero',
+        referrer: document.referrer || 'directo'
+    };
 
-        async function finishSurvey() {
-            const wrapper = preguntaActualDiv.querySelector('.pregunta-wrapper');
-            wrapper?.classList.add('leaving');
+    console.log('📊 Datos preparados:', surveyData.userAnswers.length, 'respuestas');
 
-            setTimeout(() => {
-                displayLoadingScreen();
-            }, 400);
+    try {
+        // Procesar instantáneamente sin servidor
+        const result = processSurveyLocally(surveyData);
+        
+        // Mostrar resultado inmediatamente
+        handleSurveyResult(result);
+        
+        console.log('✅ Perfil político calculado y mostrado - Listo para redes sociales');
+        
+    } catch (error) {
+        console.error('❌ Error procesando cuestionario:', error);
+        showError('Error procesando cuestionario. Por favor inténtalo de nuevo.');
+    }
+}
 
-            const contactInfoWrapper = userAnswers.find(r => r.pregunta_id === 12) || {};
-            const surveyAnswers = userAnswers.filter(r => r.pregunta_id !== 12);
-            
-            const apiUrl = `${window.location.origin}/api/procesar`;
+function processSurveyLocally(surveyData) {
+    console.log('🧮 Calculando perfil político localmente...');
+    
+    // Validar datos
+    if (!surveyData.userAnswers || surveyData.userAnswers.length === 0) {
+        throw new Error('No se encontraron respuestas del cuestionario');
+    }
+    
+    // Filtrar solo respuestas válidas (preguntas 1-10 del perfil político)
+    const userAnswers = surveyData.userAnswers.filter(a => a.pregunta_id <= 10);
+    
+    if (userAnswers.length === 0) {
+        throw new Error('No se encontraron respuestas válidas de preguntas políticas');
+    }
+    
+    console.log('📊 Procesando', userAnswers.length, 'respuestas políticas');
+    
+    // Matriz de scoring para calcular perfil político
+    const scoring = {
+        'centro-derecha': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        'centro-izquierda': [6, 5, 4, 3, 2, 1, 10, 9, 8, 7],
+        'libertario': [2, 4, 6, 8, 10, 1, 3, 5, 7, 9],
+        'conservador': [3, 6, 9, 10, 8, 2, 5, 7, 1, 4]
+    };
 
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => {
-                controller.abort("El servidor está tardando mucho en responder (Timeout).");
-            }, 8000);
+    // Inicializar scores
+    let scores = {
+        'centro-derecha': 0,
+        'centro-izquierda': 0,
+        'libertario': 0,
+        'conservador': 0
+    };
 
-            try {
-                // ENVIAR DATOS AL BACKEND CON TRACKING MEJORADO
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'X-Client-Info': 'mapa-politico-guerrero-web'
-                    },
-                    body: JSON.stringify({ 
-                        userAnswers: surveyAnswers,
-                        contactInfo: { 
-                            nombre: contactInfoWrapper.nombre, 
-                            email: contactInfoWrapper.email 
-                        },
-                        // NUEVOS DATOS PARA TRACKING AVANZADO
-                        userAgent: navigator.userAgent,
-                        timestamp: new Date().toISOString(),
-                        municipality: localStorage.getItem('userMunicipality') || 'No especificado',
-                        referrer: document.referrer,
-                        utm: {
-                            source: new URLSearchParams(window.location.search).get('utm_source'),
-                            medium: new URLSearchParams(window.location.search).get('utm_medium'),
-                            campaign: new URLSearchParams(window.location.search).get('utm_campaign'),
-                            content: new URLSearchParams(window.location.search).get('utm_content'),
-                            term: new URLSearchParams(window.location.search).get('utm_term')
-                        }
-                    }),
-                    signal: controller.signal
-                });
-                
-                clearTimeout(timeoutId);
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || `Error del servidor: ${response.status}`);
-                }
-
-                const result = await response.json();
-                
-                if (result.success && result.perfil) {
-                    // TRACKING DE CONVERSIÓN EXITOSA
-                    trackEvent('survey_completed', 'conversion', 'survey_finished', 1);
-                    trackEvent('profile_generated', 'engagement', result.perfil.etiqueta, 1);
-                    
-                    if (typeof fbq === 'function') {
-                        fbq('track', 'CompleteRegistration', {
-                            content_name: result.perfil.etiqueta,
-                            status: 'completado',
-                            value: 1,
-                            currency: 'USD'
-                        });
-                    }
-                    
-                    displayResultsPage(result.perfil);
-                } else {
-                    throw new Error(result.message || 'Error al procesar el perfil.');
-                }
-
-            } catch (error) {
-                clearTimeout(timeoutId);
-                
-                let errorMessage = `Error: ${error.message}`;
-                if (error.name === 'AbortError') {
-                    errorMessage = "Error: El servidor está tardando mucho en responder. Revisa la configuración de Vercel.";
-                } else if (error.name === 'TypeError') {
-                    errorMessage = "Error: No se pudo conectar al servidor. Revisa tu conexión a internet o el CORS."
-                }
-                
-                console.error("Error al contactar al backend:", error);
-                const loadingMessage = document.getElementById('loading-message');
-                if (loadingMessage) {
-                    loadingMessage.innerText = errorMessage;
-                }
-                const loader = document.querySelector('.loader');
-                if (loader) {
-                    loader.style.display = 'none';
-                }
-                
-                // TRACKING DE ERROR
-                trackEvent('survey_error', 'error', 'api_failure', 1);
+    // Calcular coincidencias para cada perfil
+    userAnswers.forEach(respuesta => {
+        const value = respuesta.respuesta || respuesta.valor;
+        const questionIndex = respuesta.pregunta_id - 1; // Convertir a índice 0-9
+        
+        Object.keys(scoring).forEach(perfil => {
+            if (scoring[perfil][questionIndex] === value) {
+                scores[perfil] += 1;
             }
-        }
+        });
+    });
 
+    // Encontrar perfil dominante
+    const perfilDominante = Object.keys(scores).reduce((a, b) => 
+        scores[a] > scores[b] ? a : b
+    );
+
+    // Configurar perfiles completos con descripciones detalladas
+    const perfilesCompletos = {
+        'centro-derecha': {
+            etiqueta: 'Centro Derecha',
+            nombre: 'Centro Derecha',
+            descripcion: 'Enfoque liberal económico con valores tradicionales. Defiendes el libre mercado, la estabilidad fiscal y los valores familiares como base de la sociedad.',
+            color: '#2563eb',
+            porcentaje: Math.round((scores['centro-derecha'] / userAnswers.length) * 100),
+            emoji: '🏛️',
+            posicion_x: 30,
+            posicion_y: 40,
+            tema_principal: 'Económico',
+            liderazgo_preferido: 'Técnico',
+            valor_gobierno: 'Eficiencia'
+        },
+        'centro-izquierda': {
+            etiqueta: 'Centro Izquierda',
+            nombre: 'Centro Izquierda',
+            descripcion: 'Enfoque socialdemócrata con políticas progresistas. Priorizas la justicia social, los derechos humanos, la igualdad de oportunidades y el estado de bienestar.',
+            color: '#dc2626',
+            porcentaje: Math.round((scores['centro-izquierda'] / userAnswers.length) * 100),
+            emoji: '⚖️',
+            posicion_x: 70,
+            posicion_y: 60,
+            tema_principal: 'Social',
+            liderazgo_preferido: 'Dialogante',
+            valor_gobierno: 'Participación'
+        },
+        'libertario': {
+            etiqueta: 'Libertario',
+            nombre: 'Libertario',
+            descripcion: 'Máxima libertad individual y mínima intervención estatal. Defiendes la autonomía personal, el libre mercado, la propiedad privada y la reducción del estado.',
+            color: '#f59e0b',
+            porcentaje: Math.round((scores['libertario'] / userAnswers.length) * 100),
+            emoji: '🗽',
+            posicion_x: 20,
+            posicion_y: 20,
+            tema_principal: 'Libertad',
+            liderazgo_preferido: 'Carismático',
+            valor_gobierno: 'Transparencia'
+        },
+        'conservador': {
+            etiqueta: 'Conservador',
+            nombre: 'Conservador',
+            descripcion: 'Preservación de valores tradicionales y orden social. Priorizas la estabilidad, los valores establecidos, la autoridad y la protección de la familia y la comunidad.',
+            color: '#059669',
+            porcentaje: Math.round((scores['conservador'] / userAnswers.length) * 100),
+            emoji: '🏰',
+            posicion_x: 40,
+            posicion_y: 80,
+            tema_principal: 'Seguridad',
+            liderazgo_preferido: 'Ejecutor',
+            valor_gobierno: 'Autoridad'
+        }
+    };
+
+    console.log('🎯 Perfil calculado:', perfilDominante, perfilesCompletos[perfilDominante].porcentaje + '%');
+
+    return {
+        success: true,
+        perfil: perfilesCompletos[perfilDominante],
+        timestamp: new Date().toISOString(),
+        respuestas_procesadas: userAnswers.length,
+        message: 'Cuestionario procesado - Optimizado para redes sociales',
+        local_processing: true,
+        social_ready: true
+    };
+}
+
+function handleSurveyResult(result) {
+    console.log('📋 Mostrando resultado del perfil:', result.perfil?.etiqueta);
+    
+    if (result.success && result.perfil) {
+        // Mostrar el nuevo modal optimizado para redes sociales
+        showProfileResult(result.perfil);
+        
+        // Agregar eventos de tracking para redes sociales
+        trackSocialMediaEngagement(result.perfil.etiqueta);
+        
+    } else {
+        console.error('❌ Error en resultado:', result);
+        showError('Error mostrando el resultado del perfil. Por favor inténtalo de nuevo.');
+    }
+}
+
+function showProfileResult(perfil) {
+    console.log('🎨 Mostrando modal de resultado optimizado para redes...');
+    
+    // Crear modal con diseño optimizado para redes sociales
+    const modal = document.createElement('div');
+    modal.className = 'result-modal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, rgba(0,0,0,0.8), rgba(0,0,0,0.9));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        animation: fadeIn 0.3s ease-out;
+    `;
+    
+    modal.innerHTML = `
+        <div style="
+            background: white;
+            padding: 2.5rem;
+            border-radius: 20px;
+            max-width: 550px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            position: relative;
+            animation: slideUp 0.4s ease-out;
+        ">
+            <!-- Emoji del perfil -->
+            <div style="font-size: 4rem; margin-bottom: 1rem; animation: bounce 1s infinite;">
+                ${perfil.emoji}
+            </div>
+            
+            <!-- Título principal -->
+            <h2 style="color: #2c3e50; margin: 0 0 1rem 0; font-size: 1.6rem; font-weight: 700;">
+                🎯 Tu Perfil Político
+            </h2>
+            
+            <!-- Resultado principal -->
+            <div style="
+                background: linear-gradient(135deg, ${perfil.color}15, ${perfil.color}25);
+                padding: 2rem;
+                border-radius: 15px;
+                margin: 1.5rem 0;
+                border: 3px solid ${perfil.color}30;
+                position: relative;
+                overflow: hidden;
+            ">
+                <!-- Efecto de brillo -->
+                <div style="
+                    position: absolute;
+                    top: -50%;
+                    left: -50%;
+                    width: 200%;
+                    height: 200%;
+                    background: linear-gradient(45deg, transparent, ${perfil.color}10, transparent);
+                    animation: shimmer 2s infinite;
+                "></div>
+                
+                <div style="position: relative; z-index: 1;">
+                    <h3 style="
+                        color: ${perfil.color};
+                        margin: 0 0 1.5rem 0;
+                        font-size: 2.2rem;
+                        font-weight: 900;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                    ">
+                        ${perfil.nombre}
+                    </h3>
+                    
+                    <p style="
+                        color: #2c3e50;
+                        line-height: 1.7;
+                        margin: 0 0 2rem 0;
+                        font-size: 1.1rem;
+                        font-weight: 500;
+                    ">
+                        ${perfil.descripcion}
+                    </p>
+                    
+                    <!-- Barra de progreso con animación -->
+                    <div style="
+                        background: linear-gradient(to right, #f8f9fa, #e9ecef);
+                        border-radius: 12px;
+                        padding: 1.5rem;
+                        margin: 1.5rem 0;
+                        border: 2px solid ${perfil.color}20;
+                    ">
+                        <div style="
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            margin-bottom: 1rem;
+                        ">
+                            <span style="font-weight: 600; color: #495057;">Coincidencia</span>
+                            <span style="
+                                font-weight: 900;
+                                color: ${perfil.color};
+                                font-size: 1.4rem;
+                            ">
+                                ${perfil.porcentaje}%
+                            </span>
+                        </div>
+                        
+                        <div style="
+                            background: #e9ecef;
+                            height: 24px;
+                            border-radius: 12px;
+                            overflow: hidden;
+                            position: relative;
+                        ">
+                            <div style="
+                                background: linear-gradient(90deg, ${perfil.color}, ${perfil.color}cc);
+                                height: 100%;
+                                width: 0%;
+                                border-radius: 12px;
+                                animation: fillBar 1.5s ease-out forwards;
+                                box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+                            " id="progress-bar"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Botones de acción -->
+            <div style="margin-top: 2rem; display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center;">
+                <button onclick="shareProfileResult('${perfil.nombre}', ${perfil.porcentaje})" style="
+                    background: ${perfil.color};
+                    color: white;
+                    border: none;
+                    padding: 1rem 2rem;
+                    border-radius: 12px;
+                    cursor: pointer;
+                    font-weight: 700;
+                    font-size: 1rem;
+                    box-shadow: 0 4px 12px ${perfil.color}30;
+                    transition: all 0.3s ease;
+                    min-width: 200px;
+                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px ${perfil.color}40';" 
+                   onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px ${perfil.color}30';">
+                    📤 Compartir Mi Resultado
+                </button>
+                
+                <button onclick="this.parentElement.parentElement.parentElement.remove();" style="
+                    background: linear-gradient(135deg, #6c757d, #495057);
+                    color: white;
+                    border: none;
+                    padding: 1rem 2rem;
+                    border-radius: 12px;
+                    cursor: pointer;
+                    font-weight: 700;
+                    font-size: 1rem;
+                    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+                    transition: all 0.3s ease;
+                " onmouseover="this.style.transform='translateY(-2px)'" 
+                   onmouseout="this.style.transform='translateY(0)'">
+                    ✕ Cerrar
+                </button>
+            </div>
+            
+            <!-- Indicador de procesamiento local -->
+            <div style="
+                margin-top: 1.5rem;
+                font-size: 0.9rem;
+                color: #6c757d;
+                border-top: 2px solid #dee2e6;
+                padding-top: 1rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.5rem;
+            ">
+                <span style="font-size: 1.2rem;">🚀</span>
+                <span>Procesado instantáneamente - Optimizado para redes sociales</span>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Iniciar animación de la barra de progreso
+    setTimeout(() => {
+        const progressBar = document.getElementById('progress-bar');
+        if (progressBar) {
+            progressBar.style.width = perfil.porcentaje + '%';
+        }
+    }, 300);
+    
+    console.log('✅ Modal de resultado mostrado correctamente para redes sociales');
+}
+
+function shareProfileResult(profileName, percentage) {
+    console.log('📤 Preparando para compartir:', profileName, percentage + '%');
+    
+    const shareText = `🎯 Acabo de hacer el cuestionario político y soy: ${profileName} con ${percentage}% de coincidencia\n\nDescubre tu perfil político:`;
+    const shareUrl = window.location.href;
+    
+    // Intentar compartir nativo del navegador
+    if (navigator.share) {
+        navigator.share({
+            title: 'Mi Perfil Político',
+            text: shareText,
+            url: shareUrl
+        }).then(() => {
+            console.log('✅ Compartido exitosamente con API nativa');
+        }).catch((error) => {
+            console.log('⚠️ Error con API nativa, usando fallback');
+            fallbackShare(shareText, shareUrl);
+        });
+    } else {
+        fallbackShare(shareText, shareUrl);
+    }
+}
+
+function fallbackShare(text, url) {
+    // Fallback para navegadores sin API nativa
+    const encodedText = encodeURIComponent(text);
+    const encodedUrl = encodeURIComponent(url);
+    
+    // Crear opciones de compartir
+    const shareOptions = [
+        {
+            name: 'Facebook',
+            url: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}`,
+            color: '#1877f2'
+        },
+        {
+            name: 'Twitter',
+            url: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`,
+            color: '#1da1f2'
+        },
+        {
+            name: 'WhatsApp',
+            url: `https://wa.me/?text=${encodedText}%20${encodedUrl}`,
+            color: '#25d366'
+        },
+        {
+            name: 'Telegram',
+            url: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`,
+            color: '#0088cc'
+        }
+    ];
+    
+    // Crear modal de opciones
+    const shareModal = document.createElement('div');
+    shareModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10001;
+    `;
+    
+    shareModal.innerHTML = `
+        <div style="
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 400px;
+        ">
+            <h3 style="margin: 0 0 1.5rem 0; color: #2c3e50;">📤 Compartir Resultado</h3>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                ${shareOptions.map(option => `
+                    <a href="${option.url}" target="_blank" style="
+                        display: flex;
+                        align-items: center;
+                        gap: 1rem;
+                        padding: 1rem;
+                        background: ${option.color};
+                        color: white;
+                        text-decoration: none;
+                        border-radius: 10px;
+                        font-weight: 600;
+                        transition: transform 0.2s ease;
+                    " onmouseover="this.style.transform='scale(1.05)'" 
+                       onmouseout="this.style.transform='scale(1)'">
+                        <span style="font-size: 1.5rem;">${getSocialIcon(option.name)}</span>
+                        <span>Compartir en ${option.name}</span>
+                    </a>
+                `).join('')}
+            </div>
+            
+       
         function displayLoadingScreen() {
             const mensajes = ["Analizando tus respuestas...", "Calculando tu perfil...", "Mapeando tu posición política...", "Generando tu infografía..."];
             let mensajeIndex = 0;
