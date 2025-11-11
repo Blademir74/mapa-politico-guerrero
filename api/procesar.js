@@ -1,34 +1,21 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Variables de entorno ESENCIALES
+const supabaseUrl = process.env.SUPABASE_URL;
 // ... (existing code) ...
-if (!supabaseUrl || !supabaseAnonKey) {
-// ... (existing code) ...
-    throw new Error("Configuración de Supabase incompleta");
-}
-
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 function calculatePoliticalProfile(respuestas) {
 // ... (existing code) ...
-    let suma_x = 0, suma_y = 0;
-// ... (existing code) ...
-    let etiqueta = "";
     let descripcion = "";
     
-// ... (existing code) ...
     if (promedio_x <= 2 && promedio_y <= 2) {
-// ... (existing code) ...
-        descripcion = "Valoras la innovación y el cambio, con una visión social sólida.";
 // ... (existing code) ...
     } else {
         posicion = "Derecha-Centralismo";
-// ... (existing code) ...
+        etiqueta = "Conservador Tradicional";
         descripcion = "Valoras la tradición, el orden y la autoridad establecida.";
     }
-    
-// ... (existing code) ...
-    temas = [...new Set(temas)];
     
 // ... (existing code) ...
         fecha: new Date().toISOString()
@@ -46,7 +33,7 @@ async function saveToSupabase(perfil, contactInfo, analytics) {
         };
         
         const { data, error } = await supabase
-            .from('participaciones') // <-- CORREGIDO (antes 'participacion_mapa_politico')
+            .from('participaciones') // <-- ¡CORREGIDO!
             .insert([dataToSave])
             .select();
             
@@ -55,7 +42,6 @@ async function saveToSupabase(perfil, contactInfo, analytics) {
         
     } catch (error) {
 // ... (existing code) ...
-        return false;
     }
 }
 
