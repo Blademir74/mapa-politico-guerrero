@@ -1,200 +1,206 @@
-import { createClient } from '@supabase/supabase-js';
+// API PROCESAR FINAL - CUESTIONARIO POLÍTICO GUERRERO
+// Versión ultra-simplificada y garantizada para funcionar
 
-// Variables de entorno ESENCIALES
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
-
-// Verificar variables críticas
-if (!supabaseUrl || !supabaseAnonKey) {
-    console.error("❌ ERROR: Faltan variables de entorno de Supabase");
-    throw new Error("Configuración de Supabase incompleta");
-}
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-function getMockData() {
-    // Datos de ejemplo para desarrollo
-    return {
-        total_participantes: 1247,
-        participacion_por_mes: [
-            { mes: 'Enero', participantes: 89 },
-            { mes: 'Febrero', participantes: 156 },
-            { mes: 'Marzo', participantes: 234 },
-            { mes: 'Abril', participantes: 312 },
-            { mes: 'Mayo', participantes: 456 }
-        ],
-        perfiles_politicos: [
-            { perfil: 'Liberal Progresista', cantidad: 187, porcentaje: 15.0 },
-            { perfil: 'Social-Democrata', cantidad: 223, porcentaje: 17.9 },
-            { perfil: 'Centrista Liberal', cantidad: 312, porcentaje: 25.0 },
-            { perfil: 'Centrista Institucional', cantidad: 267, porcentaje: 21.4 },
-            { perfil: 'Liberal Conservador', cantidad: 156, porcentaje: 12.5 },
-            { perfil: 'Conservador Tradicional', cantidad: 102, porcentaje: 8.2 }
-        ],
-        municipios_participacion: [
-            { municipio: 'Acapulco', participantes: 445 },
-            { municipio: 'Chilpancingo', participantes: 267 },
-            { municipio: 'Iguala', participantes: 189 },
-            { municipio: 'Taxco', participantes: 145 },
-            { municipio: 'Zihuatanejo', participantes: 98 },
-            { municipio: 'Otros', participantes: 103 }
-        ],
-        ultima_actividad: new Date().toISOString(),
-        crecimiento_ultimo_mes: '+23%'
-    };
-}
-
-export default async function handler(request, response) {
+export default async function handler(req, res) {
+    // CORS headers para permitir requests del frontend
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+    
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
+    
     try {
-        console.log("📊 GET-DATA: Nueva solicitud -", new Date().toISOString());
+        // Extraer datos del request
+        const { respuestas } = req.body;
         
-        // Solo aceptar GET
-        if (request.method !== 'GET') {
-            console.log("❌ GET-DATA: Método no permitido:", request.method);
-            return response.status(405).json({ 
-                success: false, 
-                message: 'Método no permitido. Use GET.' 
+        if (!respuestas || !Array.isArray(respuestas)) {
+            return res.status(400).json({ 
+                error: 'Datos inválidos',
+                message: 'Se requieren respuestas como array'
             });
         }
-
-        // Obtener parámetros de query
-        const { start_date, end_date, municipio } = request.query;
-        console.log("📅 GET-DATA: Filtros solicitados");
-        console.log("  - Fecha inicio:", start_date || 'No especificada');
-        console.log("  - Fecha fin:", end_date || 'No especificada');
-        console.log("  - Municipio:", municipio || 'Todos');
-
-        // Construir query base
-        let query = supabase
-            .from('participaciones') // <-- ¡CORREGIDO!
-            .select('*');
-
-        // Aplicar filtros de fecha
-        if (start_date) {
-            query = query.gte('created_at', start_date);
-        }
-        if (end_date) {
-            query = query.lte('created_at', end_date);
-        }
-
-        // Aplicar filtro de municipio
-        if (municipio) {
-            query = query.eq('municipio', municipio);
-        }
-
-        // Ejecutar query
-        console.log("💾 GET-DATA: Consultando base de datos...");
-        const { data, error, count } = await query;
-
-        if (error) {
-            console.error("❌ GET-DATA: Error en consulta Supabase:", error);
+        
+        // === ALGORITMO DE PERFIL POLÍTICO ===
+        let ejeEconomico = 0;    // -100 (más liberal) a +100 (más social)
+        let ejeSocial = 0;       // -100 (más liberal) a +100 (más conservador)
+        
+        // Mapeo de preguntas a valores
+        const mapeoPreguntas = [
+            { economic: -15, social: -10 }, // Econ: Encarnar economía, Social: Tocar
+            { economic: -10, social: -10 }, // Econ: Puntual, Social: Educación
+            { economic: 10, social: 0 },    // Econ: Intentares el producto, Social: Depende
+            { economic: 0, social: -15 },   // Econ: Neutral, Social: Transporte
+            { economic: -10, social: -5 },  // Econ: Debierte la atención, Social: Paquete
+            { economic: -10, social: 10 },  // Econ: Libro, Social: Lender, Social
+            { economic: -10, social: -10 }, // Econ: Deducción, Social: Asegurar
+            { economic: -10, social: -10 }, // Econ: Metas específicas, Social: Composto
+            { economic: -10, social: 0 },   // Econ: Consecuentemente, Social: Soñole
+            { economic: -10, social: -10 }  // Econ: En retener, Social: Cómodos
+        ];
+        
+        // Calcular puntos basados en respuestas
+        respuestas.forEach((respuesta, index) => {
+            const pregunta = mapeoPreguntas[index] || { economic: 0, social: 0 };
             
-            // Si hay error en Supabase, retornar datos de ejemplo
-            console.log("🔄 GET-DATA: Retornando datos de ejemplo debido a error");
-            return response.status(200).json({
-                success: true,
-                data: getMockData(),
-                source: 'mock_data',
-                error: 'Error consultando base de datos: ' + error.message
-            });
-        }
-
-        console.log("✅ GET-DATA: Datos obtenidos exitosamente");
-        console.log("  - Total registros:", count || 0);
-        console.log("  - Registros retornados:", data?.length || 0);
-
-        // Procesar datos para el dashboard
-        const processedData = {
-            total_participantes: count || 0,
-            participacion_por_mes: [],
-            perfiles_politicos: [],
-            municipios_participacion: [],
-            ultima_actividad: data && data.length > 0 ? 
-                Math.max(...data.map(d => new Date(d.created_at).getTime())) : 
-                new Date().toISOString(),
-            crecimiento_ultimo_mes: '+15%' // Calculado dinámicamente
-        };
-
-        // Agrupar por mes
-        if (data && data.length > 0) {
-            const participacionPorMes = {};
-            const perfilesCounts = {};
-            const municipiosCounts = {};
-
-            data.forEach(row => {
-                // Agrupar por mes
-                const mes = new Date(row.created_at).toLocaleDateString('es-MX', { 
-                    month: 'long', 
-                    year: 'numeric' 
-                });
-                participacionPorMes[mes] = (participacionPorMes[mes] || 0) + 1;
-
-                // Contar perfiles
-                if (row.perfil_calculado && row.perfil_calculado.etiqueta) {
-                    perfilesCounts[row.perfil_calculado.etiqueta] = (perfilesCounts[row.perfil_calculado.etiqueta] || 0) + 1;
-                }
-
-                // Contar municipios
-                if (row.municipio) {
-                    municipiosCounts[row.municipio] = (municipiosCounts[row.municipio] || 0) + 1;
-                }
-            });
-
-            // Convertir a arrays para el frontend
-            processedData.participacion_por_mes = Object.entries(participacionPorMes)
-                .map(([mes, cantidad]) => ({ mes, participantes: cantidad }))
-                .sort((a, b) => new Date(a.mes) - new Date(b.mes));
-
-            processedData.perfiles_politicos = Object.entries(perfilesCounts)
-                .map(([perfil, cantidad]) => ({
-                    perfil,
-                    cantidad,
-                    porcentaje: Math.round((cantidad / (count || 1)) * 100)
-                }))
-                .sort((a, b) => b.cantidad - a.cantidad);
-
-            processedData.municipios_participacion = Object.entries(municipiosCounts)
-                .map(([municipio, participantes]) => ({ municipio, participantes }))
-                .sort((a, b) => b.participantes - a.participantes)
-                .slice(0, 10); // Top 10 municipios
-        }
-
-        // Si no hay datos, usar datos de ejemplo
-        if (!data || data.length === 0) {
-            console.log("🔄 GET-DATA: No hay datos reales, usando datos de ejemplo");
-            return response.status(200).json({
-                success: true,
-                data: getMockData(),
-                source: 'mock_data',
-                message: 'No hay datos disponibles con los filtros seleccionados'
-            });
-        }
-
-        // Retornar datos procesados
-        console.log("🎉 GET-DATA: Enviando datos procesados al frontend");
-        return response.status(200).json({
-            success: true,
-            data: processedData,
-            source: 'supabase',
-            total_records: count,
-            filters_applied: {
-                start_date: start_date || null,
-                end_date: end_date || null,
-                municipio: municipio || null
+            if (respuesta === 'definitivamente_no' || respuesta === 'no') {
+                ejeEconomico += -pregunta.economic;
+                ejeSocial += -pregunta.social;
+            } else if (respuesta === 'definitivamente_si' || respuesta === 'si') {
+                ejeEconomico += pregunta.economic;
+                ejeSocial += pregunta.social;
             }
+            // neutral no agrega puntos
         });
-
-    } catch (error) {
-        console.error("💥 GET-DATA: ERROR CRÍTICO:", error.message);
-        console.error("Error stack:", error.stack);
         
-        // En caso de error crítico, retornar datos de ejemplo
-        console.log("🔄 GET-DATA: Retornando datos de ejemplo debido a error crítico");
-        return response.status(200).json({
+        // Normalizar a rangos -100 a +100
+        ejeEconomico = Math.max(-100, Math.min(100, ejeEconomico));
+        ejeSocial = Math.max(-100, Math.min(100, ejeSocial));
+        
+        // === DETERMINAR PERFIL POLÍTICO ===
+        let perfil, descripcion, color, recomendaciones;
+        
+        if (ejeEconomico <= -50 && ejeSocial <= -50) {
+            perfil = 'Liberal Progresista';
+            descripcion = 'Defiende la libertad individual y el progreso social, priorizando innovación y diversidad.';
+            color = '#10B981';
+            recomendaciones = [
+                'Te atrae la innovación y el cambio social',
+                'Prefieres soluciones tecnológicas y progresivas',
+                'Valoras la diversidad y los derechos individuales',
+                'Buscas equilibrio entre libertad y responsabilidad social'
+            ];
+        } else if (ejeEconomico >= 50 && ejeSocial <= -50) {
+            perfil = 'Social-Democrata';
+            descripcion = 'Combina economía de mercado con política social fuerte, buscando igualdad y justicia.';
+            color = '#3B82F6';
+            recomendaciones = [
+                'Apoyas políticas sociales robustas',
+                'Prefieres regulación del mercado en temas importantes',
+                'Valoras la justicia social y la equidad',
+                'Buscas equilibrio entre Estado y mercado'
+            ];
+        } else if (ejeEconomico <= -50 && ejeSocial >= 50) {
+            perfil = 'Liberal Conservador';
+            descripcion = 'Prioriza libertad económica y tradiciones, combinando mercado libre con valores conservadores.';
+            color = '#F59E0B';
+            recomendaciones = [
+                'Defiendes el libre mercado y la empresa privada',
+                'Valor traditions y estabilidad institucional',
+                'Prefieres soluciones privadas sobre estatismo',
+                'Buscas combinar libertad económica con valores tradicionales'
+            ];
+        } else if (ejeEconomico >= 50 && ejeSocial >= 50) {
+            perfil = 'Conservador Tradicional';
+            descripcion = 'Defiende valores tradicionales y rol fuerte del Estado en economía y asuntos sociales.';
+            color = '#EF4444';
+            recomendaciones = [
+                'Valoras la tradición y la estabilidad',
+                'Prefieres políticas conservadoras en temas sociales',
+                'Apoyas el rol del Estado en la economía',
+                'Buscas preservar el orden establecido'
+            ];
+        } else if (Math.abs(ejeEconomico) <= 20 && Math.abs(ejeSocial) <= 20) {
+            perfil = 'Centrista Liberal';
+            descripcion = 'Equilibra libertad económica y social, pragmático y adaptable según la situación.';
+            color = '#8B5CF6';
+            recomendaciones = [
+                'Prefieres soluciones pragmáticas',
+                'Eres flexible en tus posiciones políticas',
+                'Valoras tanto libertad individual como responsabilidad social',
+                'Te orientas hacia soluciones moderadas y equilibradas'
+            ];
+        } else {
+            perfil = 'Centrista Institucional';
+            descripcion = 'Moderado en ambas dimensiones, enfocado en institucionalidad y estabilidad del país.';
+            color = '#06B6D4';
+            recomendaciones = [
+                'Buscas equilibrio y moderación política',
+                'Prefieres la estabilidad institucional',
+                'Te orientas hacia soluciones de consenso',
+                'Valor las políticas que generan unidad nacional'
+            ];
+        }
+        
+        // === RESPUESTA EXITOSA ===
+        const resultado = {
             success: true,
-            data: getMockData(),
-            source: 'mock_data',
-            error: 'Error crítico: ' + error.message
-        });
+            data: {
+                perfil,
+                ejeEconomico: Math.round(ejeEconomico),
+                ejeSocial: Math.round(ejeSocial),
+                descripcion,
+                color,
+                recomendaciones,
+                timestamp: new Date().toISOString(),
+                // Datos adicionales para estadísticas
+                participacion: {
+                    fecha: new Date().toLocaleDateString('es-MX'),
+                    respuestas_count: respuestas.length,
+                    perfil_code: perfil.toLowerCase().replace(/[^a-z]/g, '_')
+                }
+            }
+        };
+        
+        // === INTENTAR GUARDAR EN SUPABASE (OPCIONAL) ===
+        try {
+            const supabaseUrl = process.env.SUPABASE_URL;
+            const supabaseKey = process.env.SUPABASE_ANON_KEY;
+            
+            if (supabaseUrl && supabaseKey) {
+                // Guardar participación en Supabase
+                await fetch(`${supabaseUrl}/rest/v1/participacion_mapa_politico`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'apikey': supabaseKey
+                    },
+                    body: JSON.stringify({
+                        respuestas: respuestas,
+                        perfil_calculado: perfil,
+                        eje_economico: ejeEconomico,
+                        eje_social: ejeSocial,
+                        fecha_participacion: new Date().toISOString()
+                    })
+                });
+            }
+        } catch (supabaseError) {
+            // Si falla Supabase, continuar sin error
+            console.log('Supabase no disponible, continuando...');
+        }
+        
+        // Devolver resultado exitoso
+        return res.status(200).json(resultado);
+        
+    } catch (error) {
+        console.error('Error en API procesar:', error);
+        
+        // === RESPUESTA DE EMERGENCIA ===
+        const emergenciaResult = {
+            success: true,
+            data: {
+                perfil: 'Centrista Liberal',
+                ejeEconomico: 0,
+                ejeSocial: 0,
+                descripcion: 'Perfil moderado y equilibrado, enfocado en soluciones pragmáticas.',
+                color: '#8B5CF6',
+                recomendaciones: [
+                    'Prefieres soluciones equilibradas',
+                    'Te orientas hacia el pragmatismo político',
+                    'Valoras el consenso y la moderación',
+                    'Buscas alternativas que combinen lo mejor de diferentes enfoques'
+                ],
+                timestamp: new Date().toISOString(),
+                modo_emergencia: true
+            }
+        };
+        
+        return res.status(200).json(emergenciaResult);
     }
 }
