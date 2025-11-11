@@ -1,9 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Variables de entorno ESENCIALES
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
-
 // ... (existing code) ...
 if (!supabaseUrl || !supabaseAnonKey) {
 // ... (existing code) ...
